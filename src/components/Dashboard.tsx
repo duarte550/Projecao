@@ -21,6 +21,7 @@ export type SortKey = 'nome' | 'empresa' | 'status' | 'nav' | 'navDiscounted' | 
 
 export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdateMacros, initialSim }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<'portfolio' | 'macro' | 'consolidador'>('portfolio');
+  const [navType, setNavType] = useState<'nominal' | 'vpl'>('vpl');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
   const [globalSim, setGlobalSim] = useState<SimulationParams>({
     costOverrun: initialSim?.costOverrun ?? 0,
@@ -63,7 +64,8 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
       let sum = 0;
       projEmpresa.forEach(p => {
         const simVars = { ...globalSim, ...simOverrides };
-        sum += runSimulation(p, simVars, macros, baseDate).metrics.nav;
+        const res = runSimulation(p, simVars, macros, baseDate);
+        sum += navType === 'vpl' ? res.metrics.navDiscounted : res.metrics.nav;
       });
       return sum;
     };
@@ -114,7 +116,7 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
     const companyVGV = projEmpresa.reduce((sum, p) => sum + p.vgvTotal, 0);
 
     return { delayData, costData, discountData, heatMapDelays, heatMapCosts, heatMapDiscounts, delayVsCost, delayVsDiscount, costVsDiscount, companyVGV, matrix1Discount, matrix2Cost, matrix3Delay };
-  }, [projects, selectedEmpresa, globalSim, macros, baseDate, globalMatrix1Discount, globalMatrix2Cost, globalMatrix3Delay]);
+  }, [projects, selectedEmpresa, globalSim, macros, baseDate, globalMatrix1Discount, globalMatrix2Cost, globalMatrix3Delay, navType]);
 
   const sortedProjects = useMemo(() => {
     let sortable = projectDataList.filter(p => {
@@ -644,19 +646,35 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <div>
               <h2 className="text-lg font-semibold text-slate-800">Consolidador por Empresa</h2>
-              <p className="text-sm text-slate-500">Visualização de necessidades de aporte por ano e NAV dos projetos.</p>
+              <p className="text-sm text-slate-500">Visualização de aportes e análise de sensibilidade.</p>
             </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700 mr-2">Selecione a Empresa:</label>
-              <select
-                value={selectedEmpresa}
-                onChange={(e) => setSelectedEmpresa(e.target.value)}
-                className="pl-3 pr-8 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                {companies.map(emp => (
-                  <option key={emp} value={emp}>{emp}</option>
-                ))}
-              </select>
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+                <button
+                  onClick={() => setNavType('vpl')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${navType === 'vpl' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                >
+                  VPL Descontado
+                </button>
+                <button
+                  onClick={() => setNavType('nominal')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${navType === 'nominal' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                >
+                  NAV Nominal
+                </button>
+              </div>
+              <div className="flex items-center">
+                <label className="text-sm font-medium text-slate-700 mr-2 whitespace-nowrap">Comparar:</label>
+                <select
+                  value={selectedEmpresa}
+                  onChange={(e) => setSelectedEmpresa(e.target.value)}
+                  className="pl-3 pr-8 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {companies.map(emp => (
+                    <option key={emp} value={emp}>{emp}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -698,25 +716,26 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                   });
                 });
 
-                const years = Object.keys(yearAportes).map(Number).sort();
-                const divYears = Object.keys(yearDividendos).map(Number).sort();
+                const yearsRaw = Object.keys(yearAportes).map(Number);
+                const divYearsRaw = Object.keys(yearDividendos).map(Number);
+                const allYears = Array.from(new Set([...yearsRaw, ...divYearsRaw])).sort((a, b) => a - b);
 
                 return (
                   <>
                     <div>
                       <h3 className="text-md font-semibold text-slate-800 mb-4 border-b border-slate-200 pb-2">Valores Faltantes de Aporte Opex/Capex por Projeto e Ano (R$)</h3>
-                      {years.length === 0 ? (
+                      {allYears.length === 0 ? (
                         <p className="text-sm text-slate-500 italic">Nenhum aporte projetado para esta empresa.</p>
                       ) : (
                         <div className="overflow-x-auto rounded-lg border border-slate-200">
                           <table className="w-full text-left text-sm whitespace-nowrap">
                             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
                               <tr>
-                                <th className="px-4 py-3 sticky left-0 bg-slate-50 z-10 shadow-[1px_0_0_0_#e2e8f0]">Projeto</th>
-                                {years.map(y => (
-                                  <th key={y} className="px-4 py-3 text-right">{y}</th>
+                                <th className="px-4 py-3 sticky left-0 bg-slate-50 z-10 shadow-[1px_0_0_0_#e2e8f0] w-64 min-w-[16rem]">Projeto</th>
+                                {allYears.map(y => (
+                                  <th key={y} className="px-4 py-3 text-right w-32 min-w-[8rem]">{y}</th>
                                 ))}
-                                <th className="px-4 py-3 text-right border-l border-slate-200 text-rose-700 bg-rose-50/50">Total Cumulado</th>
+                                <th className="px-4 py-3 text-right border-l border-slate-200 text-rose-700 bg-rose-50/50 w-40 min-w-[10rem]">Total Acumulado</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
@@ -725,21 +744,21 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                                 const hasAporte = Object.values(projAportes).some(val => val < 0);
                                 if (!hasAporte) return null;
 
-                                const projTotal = years.reduce((sum, y) => sum + (projAportes[y] || 0), 0);
+                                const projTotal = allYears.reduce((sum, y) => sum + (projAportes[y] || 0), 0);
 
                                 return (
                                   <tr key={p.input.id} className="hover:bg-slate-50 transition-colors">
                                     <td className="px-4 py-3 font-medium text-slate-900 sticky left-0 bg-white shadow-[1px_0_0_0_#e2e8f0] truncate max-w-[200px]" title={p.input.nome}>
                                       {p.input.nome}
                                     </td>
-                                    {years.map(y => {
-                                      const val = projAportes[y] || 0;
-                                      return (
-                                        <td key={y} className={`px-4 py-3 text-right ${val < 0 ? 'text-rose-600 font-medium' : 'text-slate-400'}`}>
-                                          {val < 0 ? formatCurrencyMillions(val) : '-'}
-                                        </td>
-                                      )
-                                    })}
+                                      {allYears.map(y => {
+                                        const val = projAportes[y] || 0;
+                                        return (
+                                          <td key={y} className={`px-4 py-3 text-right w-32 min-w-[8rem] ${val < 0 ? 'text-rose-600 font-medium' : 'text-slate-400'}`}>
+                                            {val < 0 ? formatCurrencyMillions(val) : '-'}
+                                          </td>
+                                        )
+                                      })}
                                     <td className="px-4 py-3 text-right text-rose-700 font-bold border-l border-slate-200 bg-rose-50/30">
                                       {formatCurrencyMillions(projTotal)}
                                     </td>
@@ -748,13 +767,13 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                               })}
                               <tr className="bg-rose-50 border-t border-rose-200">
                                 <td className="px-4 py-3 font-bold text-slate-900 sticky left-0 bg-rose-50 shadow-[1px_0_0_0_#fda4af]">Somatório da Empresa</td>
-                                {years.map(y => (
-                                  <td key={y} className="px-4 py-3 text-right font-bold text-rose-700">
-                                    {yearAportes[y] < 0 ? formatCurrencyMillions(yearAportes[y]) : '-'}
+                                {allYears.map(y => (
+                                  <td key={y} className="px-4 py-3 text-right font-bold text-rose-700 w-32 min-w-[8rem]">
+                                    {(yearAportes[y] || 0) < 0 ? formatCurrencyMillions(yearAportes[y]) : '-'}
                                   </td>
                                 ))}
-                                <td className="px-4 py-3 text-right font-bold text-rose-800 border-l border-rose-200 bg-rose-100/50">
-                                  {formatCurrencyMillions(years.reduce((s, y) => s + yearAportes[y], 0))}
+                                <td className="px-4 py-3 text-right font-bold text-rose-800 border-l border-rose-200 bg-rose-100/50 w-40 min-w-[10rem]">
+                                  {formatCurrencyMillions(allYears.reduce((s, y) => s + (yearAportes[y] || 0), 0))}
                                 </td>
                               </tr>
                             </tbody>
@@ -765,18 +784,18 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
 
                     <div>
                       <h3 className="text-md font-semibold text-slate-800 mb-4 border-b border-slate-200 pb-2">Distribuição de Dividendos/Caixa por Projeto e Ano (R$)</h3>
-                      {divYears.length === 0 ? (
+                      {allYears.length === 0 ? (
                         <p className="text-sm text-slate-500 italic">Nenhum dividendo projetado para esta empresa.</p>
                       ) : (
                         <div className="overflow-x-auto rounded-lg border border-slate-200">
                           <table className="w-full text-left text-sm whitespace-nowrap">
                             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
                               <tr>
-                                <th className="px-4 py-3 sticky left-0 bg-slate-50 z-10 shadow-[1px_0_0_0_#e2e8f0]">Projeto</th>
-                                {divYears.map(y => (
-                                  <th key={y} className="px-4 py-3 text-right">{y}</th>
+                                <th className="px-4 py-3 sticky left-0 bg-slate-50 z-10 shadow-[1px_0_0_0_#e2e8f0] w-64 min-w-[16rem]">Projeto</th>
+                                {allYears.map(y => (
+                                  <th key={y} className="px-4 py-3 text-right w-32 min-w-[8rem]">{y}</th>
                                 ))}
-                                <th className="px-4 py-3 text-right border-l border-slate-200 text-emerald-700 bg-emerald-50/50">Total Cumulado</th>
+                                <th className="px-4 py-3 text-right border-l border-slate-200 text-emerald-700 bg-emerald-50/50 w-40 min-w-[10rem]">Total Acumulado</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
@@ -785,17 +804,17 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                                 const hasDiv = Object.values(projDivs).some(val => val > 0);
                                 if (!hasDiv) return null;
 
-                                const projTotal = divYears.reduce((sum, y) => sum + (projDivs[y] || 0), 0);
+                                const projTotal = allYears.reduce((sum, y) => sum + (projDivs[y] || 0), 0);
 
                                 return (
                                   <tr key={p.input.id} className="hover:bg-slate-50 transition-colors">
                                     <td className="px-4 py-3 font-medium text-slate-900 sticky left-0 bg-white shadow-[1px_0_0_0_#e2e8f0] truncate max-w-[200px]" title={p.input.nome}>
                                       {p.input.nome}
                                     </td>
-                                    {divYears.map(y => {
+                                    {allYears.map(y => {
                                       const val = projDivs[y] || 0;
                                       return (
-                                        <td key={y} className={`px-4 py-3 text-right ${val > 0 ? 'text-emerald-600 font-medium' : 'text-slate-400'}`}>
+                                        <td key={y} className={`px-4 py-3 text-right w-32 min-w-[8rem] ${val > 0 ? 'text-emerald-600 font-medium' : 'text-slate-400'}`}>
                                           {val > 0 ? formatCurrencyMillions(val) : '-'}
                                         </td>
                                       )
@@ -808,13 +827,13 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                               })}
                               <tr className="bg-emerald-50 border-t border-emerald-200">
                                 <td className="px-4 py-3 font-bold text-slate-900 sticky left-0 bg-emerald-50 shadow-[1px_0_0_0_#34d399]">Somatório da Empresa</td>
-                                {divYears.map(y => (
-                                  <td key={y} className="px-4 py-3 text-right font-bold text-emerald-700">
-                                    {yearDividendos[y] > 0 ? formatCurrencyMillions(yearDividendos[y]) : '-'}
+                                {allYears.map(y => (
+                                  <td key={y} className="px-4 py-3 text-right font-bold text-emerald-700 w-32 min-w-[8rem]">
+                                    {(yearDividendos[y] || 0) > 0 ? formatCurrencyMillions(yearDividendos[y]) : '-'}
                                   </td>
                                 ))}
-                                <td className="px-4 py-3 text-right font-bold text-emerald-800 border-l border-emerald-200 bg-emerald-100/50">
-                                  {formatCurrencyMillions(divYears.reduce((s, y) => s + yearDividendos[y], 0))}
+                                <td className="px-4 py-3 text-right font-bold text-emerald-800 border-l border-emerald-200 bg-emerald-100/50 w-40 min-w-[10rem]">
+                                  {formatCurrencyMillions(allYears.reduce((s, y) => s + (yearDividendos[y] || 0), 0))}
                                 </td>
                               </tr>
                             </tbody>
@@ -870,11 +889,11 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                                 <ResponsiveContainer width="100%" height="100%">
                                   <LineChart data={globalSensitivityData.delayData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                    <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
+                                    <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: navType === 'vpl' ? 'VPL Zero' : 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
                                     <XAxis dataKey="val" tick={{fontSize: 12, fill: '#64748b'}} />
                                     <YAxis tickFormatter={(val) => `R$ ${(val/1000000).toFixed(0)}M`} tick={{fontSize: 12, fill: '#64748b'}} />
                                     <Tooltip formatter={(v: number) => formatCurrency(v)} labelFormatter={(l) => `Atraso: ${l}`} />
-                                    <Line type="monotone" dataKey="nav" stroke="#f59e0b" strokeWidth={3} dot={{r: 4, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff'}} name="NAV Global" />
+                                    <Line type="monotone" dataKey="nav" stroke="#f59e0b" strokeWidth={3} dot={{r: 4, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff'}} name={navType === 'vpl' ? 'VPL Global' : 'NAV Global'} />
                                   </LineChart>
                                 </ResponsiveContainer>
                               </div>
@@ -886,11 +905,11 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                                 <ResponsiveContainer width="100%" height="100%">
                                   <LineChart data={globalSensitivityData.costData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                    <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
+                                    <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: navType === 'vpl' ? 'VPL Zero' : 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
                                     <XAxis dataKey="val" tick={{fontSize: 12, fill: '#64748b'}} />
                                     <YAxis tickFormatter={(val) => `R$ ${(val/1000000).toFixed(0)}M`} tick={{fontSize: 12, fill: '#64748b'}} />
                                     <Tooltip formatter={(v: number) => formatCurrency(v)} labelFormatter={(l) => `Sobrecusto: ${l}`} />
-                                    <Line type="monotone" dataKey="nav" stroke="#ef4444" strokeWidth={3} dot={{r: 4, fill: '#ef4444', strokeWidth: 2, stroke: '#fff'}} name="NAV Global" />
+                                    <Line type="monotone" dataKey="nav" stroke="#ef4444" strokeWidth={3} dot={{r: 4, fill: '#ef4444', strokeWidth: 2, stroke: '#fff'}} name={navType === 'vpl' ? 'VPL Global' : 'NAV Global'} />
                                   </LineChart>
                                 </ResponsiveContainer>
                               </div>
@@ -902,11 +921,11 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                                 <ResponsiveContainer width="100%" height="100%">
                                   <LineChart data={globalSensitivityData.discountData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                    <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
+                                    <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: navType === 'vpl' ? 'VPL Zero' : 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
                                     <XAxis dataKey="val" tick={{fontSize: 12, fill: '#64748b'}} />
                                     <YAxis tickFormatter={(val) => `R$ ${(val/1000000).toFixed(0)}M`} tick={{fontSize: 12, fill: '#64748b'}} />
                                     <Tooltip formatter={(v: number) => formatCurrency(v)} labelFormatter={(l) => `Desconto: ${l}`} />
-                                    <Line type="monotone" dataKey="nav" stroke="#3b82f6" strokeWidth={3} dot={{r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff'}} name="NAV Global" />
+                                    <Line type="monotone" dataKey="nav" stroke="#3b82f6" strokeWidth={3} dot={{r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff'}} name={navType === 'vpl' ? 'VPL Global' : 'NAV Global'} />
                                   </LineChart>
                                 </ResponsiveContainer>
                               </div>
@@ -918,8 +937,8 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                             <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm">
                               <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
                                 <div>
-                                  <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz 1: Sobrecusto x Atraso de Obra (NAV Global)</h3>
-                                  <p className="text-sm text-slate-500">Impactos cruzados consolidados do portfólio.</p>
+                                  <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz 1: Sobrecusto x Atraso de Obra ({navType === 'vpl' ? 'VPL' : 'NAV'} Global)</h3>
+                                  <p className="text-sm text-slate-500">Impactos cruzados sobre o {navType === 'vpl' ? 'VPL' : 'NAV'} consolidado do portfólio.</p>
                                 </div>
                                 <div className="min-w-[200px] bg-white p-3 rounded-lg border border-slate-200">
                                   <div className="flex justify-between mb-1">
@@ -975,8 +994,8 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                             <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm">
                               <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
                                 <div>
-                                  <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz 2: Desconto Comercial x Atraso de Obra (NAV Global)</h3>
-                                  <p className="text-sm text-slate-500">Consolidado de impacto comercial vs cronograma.</p>
+                                  <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz 2: Desconto Comercial x Atraso de Obra ({navType === 'vpl' ? 'VPL' : 'NAV'} Global)</h3>
+                                  <p className="text-sm text-slate-500">Consolidado de impacto comercial vs cronograma sobre o {navType === 'vpl' ? 'VPL' : 'NAV'}.</p>
                                 </div>
                                 <div className="min-w-[200px] bg-white p-3 rounded-lg border border-slate-200">
                                   <div className="flex justify-between mb-1">
@@ -1032,8 +1051,8 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                             <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm">
                               <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
                                 <div>
-                                  <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz 3: Desconto Comercial x Sobrecusto Aplicado (NAV Global)</h3>
-                                  <p className="text-sm text-slate-500">Consolidado de erro orçamentário e dificuldade comercial.</p>
+                                  <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz 3: Desconto Comercial x Sobrecusto Aplicado ({navType === 'vpl' ? 'VPL' : 'NAV'} Global)</h3>
+                                  <p className="text-sm text-slate-500">Impacto simultâneo de erro orçamentário e dificuldade comercial no {navType === 'vpl' ? 'VPL' : 'NAV'}.</p>
                                 </div>
                                 <div className="min-w-[200px] bg-white p-3 rounded-lg border border-slate-200">
                                   <div className="flex justify-between mb-1">

@@ -18,6 +18,7 @@ interface ProjectDetailProps {
 
 export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProject }: ProjectDetailProps) {
   const [activeTab, setActiveTab] = useState<'dados' | 'premissas' | 'graficos' | 'tabela' | 'sensibilidade'>('premissas');
+  const [navType, setNavType] = useState<'nominal' | 'vpl'>('vpl');
   const sim: SimulationParams = {
     costOverrun: project.customSim?.costOverrun ?? 0,
     delayMonths: project.customSim?.delayMonths ?? 0,
@@ -42,19 +43,19 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
     const delayData = [];
     for (let d = 0; d <= 24; d += 3) {
       const res = runSimulation(project, { ...sim, delayMonths: d }, macros, baseDate);
-      delayData.push({ val: `${d}m`, nav: res.metrics.nav });
+      delayData.push({ val: `${d}m`, nav: navType === 'vpl' ? res.metrics.navDiscounted : res.metrics.nav });
     }
 
     const costData = [];
     for (let c = 0; c <= 0.5; c += 0.05) {
       const res = runSimulation(project, { ...sim, costOverrun: c }, macros, baseDate);
-      costData.push({ val: `${(c * 100).toFixed(0)}%`, nav: res.metrics.nav });
+      costData.push({ val: `${(c * 100).toFixed(0)}%`, nav: navType === 'vpl' ? res.metrics.navDiscounted : res.metrics.nav });
     }
 
     const discountData = [];
     for (let d = 0; d <= 0.5; d += 0.05) {
       const res = runSimulation(project, { ...sim, discountStock: d }, macros, baseDate);
-      discountData.push({ val: `${(d * 100).toFixed(0)}%`, nav: res.metrics.nav });
+      discountData.push({ val: `${(d * 100).toFixed(0)}%`, nav: navType === 'vpl' ? res.metrics.navDiscounted : res.metrics.nav });
     }
 
     const heatMapDelays = [0, 3, 6, 9, 12, 18, 24];
@@ -65,7 +66,7 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
       const row: any = { cost: c };
       heatMapDelays.forEach(d => {
         const res = runSimulation(project, { ...sim, costOverrun: c, delayMonths: d, discountStock: matrix1Discount }, macros, baseDate);
-        row[`delay_${d}`] = res.metrics.nav;
+        row[`delay_${d}`] = navType === 'vpl' ? res.metrics.navDiscounted : res.metrics.nav;
       });
       return row;
     });
@@ -74,7 +75,7 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
       const row: any = { discount: disc };
       heatMapDelays.forEach(d => {
         const res = runSimulation(project, { ...sim, discountStock: disc, delayMonths: d, costOverrun: matrix2Cost }, macros, baseDate);
-        row[`delay_${d}`] = res.metrics.nav;
+        row[`delay_${d}`] = navType === 'vpl' ? res.metrics.navDiscounted : res.metrics.nav;
       });
       return row;
     });
@@ -83,13 +84,13 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
       const row: any = { discount: disc };
       heatMapCosts.forEach(c => {
         const res = runSimulation(project, { ...sim, discountStock: disc, costOverrun: c, delayMonths: matrix3Delay }, macros, baseDate);
-        row[`cost_${c}`] = res.metrics.nav;
+        row[`cost_${c}`] = navType === 'vpl' ? res.metrics.navDiscounted : res.metrics.nav;
       });
       return row;
     });
 
     return { delayData, costData, discountData, heatMapDelays, heatMapCosts, heatMapDiscounts, delayVsCost, delayVsDiscount, costVsDiscount };
-  }, [project, sim, macros, baseDate, matrix1Discount, matrix2Cost, matrix3Delay]);
+  }, [project, sim, macros, baseDate, matrix1Discount, matrix2Cost, matrix3Delay, navType]);
 
   const chartData = data.cashFlow.map(cf => ({
     name: `Mês ${cf.month}`,
@@ -826,7 +827,23 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
 
       {activeTab === 'sensibilidade' && (
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        <h2 className="text-xl font-bold text-slate-800 mb-6">Análise de Sensibilidade de VPL/NAV</h2>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <h2 className="text-xl font-bold text-slate-800">Análise de Sensibilidade de VPL/NAV</h2>
+          <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+            <button
+              onClick={() => setNavType('vpl')}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${navType === 'vpl' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              VPL (Descontado)
+            </button>
+            <button
+              onClick={() => setNavType('nominal')}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${navType === 'nominal' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              NAV (Nominal)
+            </button>
+          </div>
+        </div>
         
         {/* Curvas Unidimensionais */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
@@ -836,11 +853,11 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={sensitivityData.delayData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
+                  <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: navType === 'vpl' ? 'VPL Zero' : 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
                   <XAxis dataKey="val" tick={{fontSize: 12, fill: '#64748b'}} />
                   <YAxis tickFormatter={(val) => `R$ ${(val/1000000).toFixed(0)}M`} tick={{fontSize: 12, fill: '#64748b'}} />
                   <Tooltip formatter={(v: number) => formatCurrency(v)} labelFormatter={(l) => `Atraso: ${l}`} />
-                  <Line type="monotone" dataKey="nav" stroke="#f59e0b" strokeWidth={3} dot={{r: 4, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff'}} name="NAV Projetado" />
+                  <Line type="monotone" dataKey="nav" stroke="#f59e0b" strokeWidth={3} dot={{r: 4, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff'}} name={navType === 'vpl' ? 'VPL Projetado' : 'NAV Projetado'} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -852,11 +869,11 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={sensitivityData.costData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
+                  <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: navType === 'vpl' ? 'VPL Zero' : 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
                   <XAxis dataKey="val" tick={{fontSize: 12, fill: '#64748b'}} />
                   <YAxis tickFormatter={(val) => `R$ ${(val/1000000).toFixed(0)}M`} tick={{fontSize: 12, fill: '#64748b'}} />
                   <Tooltip formatter={(v: number) => formatCurrency(v)} labelFormatter={(l) => `Sobrecusto: ${l}`} />
-                  <Line type="monotone" dataKey="nav" stroke="#ef4444" strokeWidth={3} dot={{r: 4, fill: '#ef4444', strokeWidth: 2, stroke: '#fff'}} name="NAV Projetado" />
+                  <Line type="monotone" dataKey="nav" stroke="#ef4444" strokeWidth={3} dot={{r: 4, fill: '#ef4444', strokeWidth: 2, stroke: '#fff'}} name={navType === 'vpl' ? 'VPL Projetado' : 'NAV Projetado'} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -868,11 +885,11 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={sensitivityData.discountData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
+                  <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: navType === 'vpl' ? 'VPL Zero' : 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
                   <XAxis dataKey="val" tick={{fontSize: 12, fill: '#64748b'}} />
                   <YAxis tickFormatter={(val) => `R$ ${(val/1000000).toFixed(0)}M`} tick={{fontSize: 12, fill: '#64748b'}} />
                   <Tooltip formatter={(v: number) => formatCurrency(v)} labelFormatter={(l) => `Desconto: ${l}`} />
-                  <Line type="monotone" dataKey="nav" stroke="#3b82f6" strokeWidth={3} dot={{r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff'}} name="NAV Projetado" />
+                  <Line type="monotone" dataKey="nav" stroke="#3b82f6" strokeWidth={3} dot={{r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff'}} name={navType === 'vpl' ? 'VPL Projetado' : 'NAV Projetado'} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -883,8 +900,8 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz de Sensibilidade NAV (Atraso x Sobrecusto)</h3>
-              <p className="text-sm text-slate-500 max-w-2xl">Esta tabela projeta impactos simultâneos de (<strong className="text-slate-700">Risco Físico vs Temporal</strong>). Quadros avermelhados indicam destruição de valor (NAV &lt; 0).</p>
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz de Sensibilidade {navType === 'vpl' ? 'VPL' : 'NAV'} (Atraso x Sobrecusto)</h3>
+              <p className="text-sm text-slate-500 max-w-2xl">Esta tabela projeta impactos simultâneos sobre o {navType === 'vpl' ? 'VPL' : 'NAV'}. Quadros avermelhados indicam destruição de valor ({navType === 'vpl' ? 'VPL' : 'NAV'} &lt; 0).</p>
             </div>
             <div className="min-w-[200px] bg-slate-50 p-3 rounded-lg border border-slate-200">
               <div className="flex justify-between mb-1">
@@ -948,8 +965,8 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz de Sensibilidade NAV (Atraso x Desconto Comercial)</h3>
-              <p className="text-sm text-slate-500">Impacto simultâneo entre impacto de cronograma e estratégia de vendas.</p>
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz de Sensibilidade {navType === 'vpl' ? 'VPL' : 'NAV'} (Atraso x Desconto Comercial)</h3>
+              <p className="text-sm text-slate-500 max-w-2xl">Avalia a destruição de valor sobre o {navType === 'vpl' ? 'VPL' : 'NAV'} caso a equipe de vendas precise dar descontos maiores enquanto a entrega atrasa.</p>
             </div>
             <div className="min-w-[200px] bg-slate-50 p-3 rounded-lg border border-slate-200">
               <div className="flex justify-between mb-1">
@@ -1009,8 +1026,8 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz de Sensibilidade NAV (Sobrecusto x Desconto Comercial)</h3>
-              <p className="text-sm text-slate-500">Impacto destrutivo cruzado entre erro de orçamento e dificuldade comercial.</p>
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz de Sensibilidade {navType === 'vpl' ? 'VPL' : 'NAV'} (Sobrecusto Obra x Desconto Comercial)</h3>
+              <p className="text-sm text-slate-500 max-w-2xl">Demonstra o colapso do {navType === 'vpl' ? 'VPL' : 'NAV'} em um cenário de compressão dupla de margem.</p>
             </div>
             <div className="min-w-[200px] bg-slate-50 p-3 rounded-lg border border-slate-200">
               <div className="flex justify-between mb-1">
