@@ -486,13 +486,11 @@ export function runSimulation(
   input: ProjectInput,
   sim: SimulationParams,
   macros: MacroInput[] = [],
-  fallbackDate?: Date,
+  baseDate?: Date,
   isStaticForMetrics = false
 ): ProjectData {
   // ── Data-base da projeção ──
-  const currentDate = macros.length > 0
-    ? new Date(macros[0].mesAno)
-    : (fallbackDate || new Date());
+  const currentDate = new Date(baseDate || (macros.length > 0 ? macros[0].mesAno : new Date()));
   currentDate.setDate(1);
 
   // ── Parâmetros ajustados pela simulação ──
@@ -722,7 +720,7 @@ export function runSimulation(
   // ── Métricas finais ──
   let jurosStatic = 0;
   if (!isStaticForMetrics) {
-    const staticResult = runSimulation(input, { ...sim, salesSpeedMultiplier: 0 }, macros, fallbackDate, true);
+    const staticResult = runSimulation(input, { ...sim, salesSpeedMultiplier: 0 }, macros, baseDate, true);
     jurosStatic = staticResult.cashFlow
       .filter(cf => cf.isConstruction)
       .reduce((sum, cf) => sum + cf.financingInterest, 0);
