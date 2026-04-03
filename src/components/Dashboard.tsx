@@ -706,12 +706,14 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                     if (!yearDividendos[year]) yearDividendos[year] = 0;
                     if (!projectYearDividendos[p.input.id][year]) projectYearDividendos[p.input.id][year] = 0;
 
-                    if (cf.equityCashFlow < 0) {
-                      yearAportes[year] += cf.equityCashFlow; // Aporte is negative
-                      projectYearAportes[p.input.id][year] += cf.equityCashFlow;
-                    } else if (cf.equityCashFlow > 0) {
-                      yearDividendos[year] += cf.equityCashFlow; // Dividendo is positive
-                      projectYearDividendos[p.input.id][year] += cf.equityCashFlow;
+                    const cashVal = navType === 'vpl' ? cf.discountedEquityCashFlow : cf.equityCashFlow;
+
+                    if (cashVal < 0) {
+                      yearAportes[year] += cashVal; // Aporte is negative
+                      projectYearAportes[p.input.id][year] += cashVal;
+                    } else if (cashVal > 0) {
+                      yearDividendos[year] += cashVal; // Dividendo is positive
+                      projectYearDividendos[p.input.id][year] += cashVal;
                     }
                   });
                 });
@@ -850,22 +852,31 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                           <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
                             <tr>
                               <th className="px-4 py-3">Projeto</th>
-                              <th className="px-4 py-3 text-right">NAV Projetado</th>
+                              <th className="px-4 py-3 text-right">Geração de Caixa</th>
+                              <th className="px-4 py-3 text-right border-l border-slate-200">NAV {navType === 'vpl' ? 'Descontado' : 'Nominal'}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 bg-white">
                             {projEmpresa.map(p => (
                               <tr key={p.input.id} className="hover:bg-slate-50 transition-colors">
                                 <td className="px-4 py-3 font-medium text-slate-900">{p.input.nome}</td>
-                                <td className={`px-4 py-3 text-right font-bold ${p.metrics.nav >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
-                                  {formatCurrencyMillions(p.metrics.nav)}
+                                <td className="px-4 py-3 text-right text-emerald-600">
+                                  {formatCurrencyMillions(p.cashFlow.filter(cf => (navType === 'vpl' ? cf.discountedEquityCashFlow : cf.equityCashFlow) > 0).reduce((s, cf) => s + (navType === 'vpl' ? cf.discountedEquityCashFlow : cf.equityCashFlow), 0))}
+                                </td>
+                                <td className={`px-4 py-3 text-right font-bold border-l border-slate-200 ${(navType === 'vpl' ? p.metrics.navDiscounted : p.metrics.nav) >= 0 ? 'text-emerald-700 bg-emerald-50/30' : 'text-rose-700 bg-rose-50/30'}`}>
+                                  {formatCurrencyMillions(navType === 'vpl' ? p.metrics.navDiscounted : p.metrics.nav)}
                                 </td>
                               </tr>
                             ))}
                             <tr className="bg-slate-50">
                               <td className="px-4 py-3 font-bold text-slate-900 text-right">Somatório (Consolidado)</td>
-                              <td className={`px-4 py-3 text-right font-bold text-lg ${projEmpresa.reduce((sum, p) => sum + p.metrics.nav, 0) >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
-                                {formatCurrencyMillions(projEmpresa.reduce((sum, p) => sum + p.metrics.nav, 0))}
+                              <td className="px-4 py-3 text-right font-bold text-emerald-700">
+                                {formatCurrencyMillions(projEmpresa.reduce((sum, p) => sum + p.cashFlow.filter(cf => (navType === 'vpl' ? cf.discountedEquityCashFlow : cf.equityCashFlow) > 0).reduce((s, cf) => s + (navType === 'vpl' ? cf.discountedEquityCashFlow : cf.equityCashFlow), 0), 0))}
+                              </td>
+                              <td className="px-4 py-3 text-right font-bold text-slate-900 border-l border-slate-200 bg-slate-100">
+                                {formatCurrencyMillions(
+                                  projEmpresa.reduce((sum, p) => sum + (navType === 'vpl' ? p.metrics.navDiscounted : p.metrics.nav), 0)
+                                )}
                               </td>
                             </tr>
                           </tbody>

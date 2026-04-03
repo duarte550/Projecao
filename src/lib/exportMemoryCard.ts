@@ -31,9 +31,9 @@ export function exportMemoryCard(
       p.padrao,
       p.numeroUnidades,
       p.metragemMedia,
-      format(p.dataLancamento, 'yyyy-MM-dd'),
-      format(p.dataInicioObras, 'yyyy-MM-dd'),
-      format(dataEstimadaEntregaBake, 'yyyy-MM-dd'),
+      p.dataLancamento,
+      p.dataInicioObras,
+      dataEstimadaEntregaBake,
       p.vgvTotal,
       p.percVendas,
       p.vendasPercSinal,
@@ -67,7 +67,7 @@ export function exportMemoryCard(
 
   const macroColumns = ['Mês/Ano', 'INCC', 'CDI', 'IPCA', 'TR'];
   const macroRows = macros.map(m => [
-    format(m.mesAno, 'yyyy-MM-dd'),
+    m.mesAno,
     m.incc,
     m.cdi,
     m.ipca,
@@ -76,15 +76,16 @@ export function exportMemoryCard(
 
   const premissasColumns = ['Parâmetro', 'Valor'];
   const premissasRows = [
-    ['Data Base da Projeção', format(baseDate, 'yyyy-MM-dd')],
+    ['Data Base da Projeção', baseDate],
     ['Desconto Estoque Pronto', globalSim.discountStock],
     ['Velocidade de Vendas (Multiplicador)', globalSim.salesSpeedMultiplier],
     ['Corretagem', globalSim.brokerageFee]
   ];
 
-  const wsProjects = XLSX.utils.aoa_to_sheet([projectColumns, ...projectsRows]);
-  const wsMacros = XLSX.utils.aoa_to_sheet([macroColumns, ...macroRows]);
-  const wsPremissas = XLSX.utils.aoa_to_sheet([premissasColumns, ...premissasRows]);
+  const options = { dateNF: 'dd/mm/yyyy', cellDates: true };
+  const wsProjects = XLSX.utils.aoa_to_sheet([projectColumns, ...projectsRows], options);
+  const wsMacros = XLSX.utils.aoa_to_sheet([macroColumns, ...macroRows], options);
+  const wsPremissas = XLSX.utils.aoa_to_sheet([premissasColumns, ...premissasRows], options);
 
   wsProjects['!cols'] = projectColumns.map((colName) => ({ wch: Math.max(16, colName.length + 2) }));
   wsMacros['!cols'] = macroColumns.map((colName) => ({ wch: Math.max(15, colName.length + 2) }));

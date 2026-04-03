@@ -65,7 +65,9 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
           // Tenta ler DD/MM/YYYY
           const parts = val.split('/');
           if (parts.length === 3) {
-            const date = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+            let year = Number(parts[2]);
+            if (year < 100) year += 2000;
+            const date = new Date(year, Number(parts[1]) - 1, Number(parts[0]));
             if (!isNaN(date.getTime())) return date;
           }
           // Tenta ler YYYY-MM-DD ou outros formatos válidos String
