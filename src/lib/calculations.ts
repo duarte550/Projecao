@@ -79,7 +79,7 @@ function getMacroRatesForMonth(macros: MacroInput[], monthDate: Date): MacroRate
       m.mesAno.getMonth() === monthDate.getMonth(),
   );
 
-  const cdiAnnual = macroForMonth?.cdi ?? 0.105;
+  const cdiAnnual = macroForMonth?.cdi ?? 0.135;
   const inccAnnual = macroForMonth?.incc ?? 0.05;
   const ipcaAnnual = macroForMonth?.ipca ?? 0.045;
   const trAnnual = macroForMonth?.tr ?? 0.02; // Default de 2% aa caso vazio
@@ -117,7 +117,7 @@ function determinePhase(
   const isConstructionPhase = m <= constructionMonths;
   const isGrace = m > constructionMonths && m <= constructionMonths + 3;
   const isRepasse = m > constructionMonths + 3 && m <= constructionMonths + 9;
-  const isStockSale = m > constructionMonths + 9;
+  const isStockSale = m > constructionMonths + 15;
 
   const worksCanStart =
     input.percObras > 0 ||
@@ -451,11 +451,11 @@ function computeMetrics(
 
   const saldoALiberar = Math.max(0, input.saldoFinanciamentoTotal - input.saldoFinanciamentoLiberado);
 
-  const resourcesToFinishWorks = 
-    input.posicaoCaixa + 
-    input.preChavesAReceberAtual + 
-    saldoALiberar - 
-    input.custoAIncorrer - 
+  const resourcesToFinishWorks =
+    input.posicaoCaixa +
+    input.preChavesAReceberAtual +
+    saldoALiberar -
+    input.custoAIncorrer -
     jurosAIncorrerConstrucao;
 
   const gapObra = Math.max(0, -resourcesToFinishWorks);
@@ -590,12 +590,12 @@ export function runSimulation(
     }
 
     let vendasMes = vendasMesBase * (sim.salesSpeedMultiplier ?? 1);
-    
+
     // Limita as vendas para não ultrapassar 100% do projeto
     vendasMes = Math.min(vendasMes, Math.max(0, 1 - currentPercVendas));
-    
+
     const unidadesVendidasMes = input.numeroUnidades * vendasMes;
-    
+
     // O usuário definiu que o desconto de estoque (discountStock) deve aplicar em todas as unidades vendidas 
     // a partir da data de simulação, e não apenas no estoque pronto da fase final.
     const vgvVendidoTabela = vendasMes * pools.vgvTotal;
