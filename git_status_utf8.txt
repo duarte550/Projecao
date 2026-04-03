@@ -1,0 +1,9 @@
+﻿ M src/App.tsx
+ M src/components/Dashboard.tsx
+?? .agent/
+?? design_system_ui.md
+?? design_system_ui_utf8.md
+?? git_status.txt
+?? git_status_utf8.txt
+?? src/components/Dashboard.css
+?? src/components/dashboard/

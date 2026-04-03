@@ -1,0 +1,67 @@
+import React from 'react';
+import { format } from 'date-fns';
+import { MacroInput } from '../../types';
+
+const MACRO_FIELDS: { key: keyof MacroInput; label: string }[] = [
+  { key: 'incc', label: 'INCC (%)' },
+  { key: 'cdi',  label: 'CDI (%)'  },
+  { key: 'ipca', label: 'IPCA (%)' },
+  { key: 'tr',   label: 'TR (%)'   },
+];
+
+interface Props {
+  macros: MacroInput[];
+  onUpdateMacros?: (macros: MacroInput[]) => void;
+}
+
+export function MacroTab({ macros, onUpdateMacros }: Props) {
+  const updateField = (idx: number, field: keyof MacroInput, raw: string) => {
+    const val = parseFloat(raw);
+    if (isNaN(val) || !onUpdateMacros) return;
+    const next = [...macros];
+    next[idx] = { ...next[idx], [field]: val };
+    onUpdateMacros(next);
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="p-6 border-b border-slate-200">
+        <h2 className="text-lg font-semibold text-slate-800">Projeções Macroeconômicas</h2>
+        <p className="text-sm text-slate-500 mt-1">
+          Os valores abaixo foram carregados da planilha de Input, mas você pode ajustá-los em tempo real aqui.
+          O Dashboard reagirá instantaneamente a qualquer mudança nessa curva. Tabela interativa.
+          Exportar o Memory Card salvará estes novos valores na próxima aba "Macros".
+        </p>
+      </div>
+      <div className="overflow-x-auto max-h-[600px]">
+        <table className="w-full text-left text-sm whitespace-nowrap">
+          <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium sticky top-0 z-10 shadow-[0_1px_0_0_#e2e8f0]">
+            <tr>
+              <th className="px-6 py-4">Mês/Ano</th>
+              {MACRO_FIELDS.map(f => (
+                <th key={String(f.key)} className="px-6 py-4 text-right">{f.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200">
+            {macros.map((m, idx) => (
+              <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                <td className="px-6 py-3 text-slate-900 font-medium">{format(m.mesAno, 'MM/yyyy')}</td>
+                {MACRO_FIELDS.map(f => (
+                  <td key={String(f.key)} className="px-6 py-3 text-right">
+                    <input
+                      type="number" step="0.001"
+                      value={(m[f.key] as number | undefined) ?? 0}
+                      onChange={(e) => updateField(idx, f.key, e.target.value)}
+                      className="w-24 text-right bg-white border border-slate-300 rounded px-2 py-1 text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
