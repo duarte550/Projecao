@@ -422,6 +422,7 @@ function computeMetrics(
   jurosAIncorrerConstrucao: number
 ): ProjectMetrics {
   const nav = cashFlow.reduce((sum, cf) => sum + cf.equityCashFlow, 0);
+  const navDiscounted = cashFlow.reduce((sum, cf) => sum + cf.discountedEquityCashFlow, 0);
 
   const expectedPercObras = calculateOptimalCurve(input.percVendas);
   const statusCurvaOtima: 'OK' | 'Atrasado' =
@@ -463,6 +464,7 @@ function computeMetrics(
 
   return {
     nav,
+    navDiscounted,
     totalOutOfPocketInterest: accumulatedOutOfPocketInterest,
     finalCoverageRatio,
     icFinanciamento,
@@ -526,6 +528,7 @@ export function runSimulation(
   let repasseMonthCount = 0;
 
   const cashFlow: MonthlyCashFlow[] = [];
+  let cumulativeDiscountFactor = 1;
 
   // ── Loop mensal ──
   for (let m = 1; m <= totalMonths; m++) {
@@ -546,6 +549,10 @@ export function runSimulation(
     // 4. Taxas de dívida do mês
     const finMonthlyRate = computeMonthlyDebtRate(input.finTaxaAnual, input.finIndexador, rates);
     const permutaMonthlyRate = computeMonthlyDebtRate(input.permutaTaxaAnual, input.permutaIndexador, rates);
+
+    // Atualiza o fator de desconto cumulativo usando a taxa do financiamento do mês
+    cumulativeDiscountFactor *= (1 + finMonthlyRate);
+    const discountFactor = 1 / cumulativeDiscountFactor;
 
     // 5. Snapshot de início do mês
     const percVendasInicial = currentPercVendas;
@@ -708,6 +715,8 @@ export function runSimulation(
       permutaInterest,
       permutaBalance: currentPermutaBalance,
       equityCashFlow: wf.equityCashFlow,
+      discountFactor,
+      discountedEquityCashFlow: wf.equityCashFlow * discountFactor,
       accumulatedOutOfPocketInterest,
 
       percObras: currentPercObras,

@@ -17,7 +17,7 @@ interface DashboardProps {
   initialSim?: Partial<SimulationParams>;
 }
 
-export type SortKey = 'nome' | 'empresa' | 'status' | 'nav' | 'topup' | 'recursosFinalizar' | 'percGap' | 'icFin' | 'icFinEst' | 'icTotal' | 'icTotalEst' | 'terminoObras';
+export type SortKey = 'nome' | 'empresa' | 'status' | 'nav' | 'navDiscounted' | 'topup' | 'recursosFinalizar' | 'percGap' | 'icFin' | 'icFinEst' | 'icTotal' | 'icTotalEst' | 'terminoObras';
 
 export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdateMacros, initialSim }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<'portfolio' | 'macro' | 'consolidador'>('portfolio');
@@ -41,6 +41,7 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
   }, [projects, globalSim, macros, baseDate]);
 
   const totalNav = projectDataList.reduce((sum, p) => sum + p.metrics.nav, 0);
+  const totalNavDiscounted = projectDataList.reduce((sum, p) => sum + p.metrics.navDiscounted, 0);
   const totalOutOfPocket = projectDataList.reduce((sum, p) => sum + p.metrics.totalOutOfPocketInterest, 0);
   const projectsAtRisk = projectDataList.filter(p => p.metrics.statusCurvaOtima === 'Atrasado' || p.metrics.nav < 0).length;
 
@@ -132,6 +133,7 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
           case 'empresa': aVal = a.input.empresa; bVal = b.input.empresa; break;
           case 'status': aVal = a.metrics.statusCurvaOtima; bVal = b.metrics.statusCurvaOtima; break;
           case 'nav': aVal = a.metrics.nav; bVal = b.metrics.nav; break;
+          case 'navDiscounted': aVal = a.metrics.navDiscounted; bVal = b.metrics.navDiscounted; break;
           case 'topup': aVal = a.metrics.totalOutOfPocketInterest; bVal = b.metrics.totalOutOfPocketInterest; break;
           case 'recursosFinalizar': aVal = a.metrics.resourcesToFinishWorks; bVal = b.metrics.resourcesToFinishWorks; break;
           case 'percGap': aVal = a.metrics.percVendasParaGap; bVal = b.metrics.percVendasParaGap; break;
@@ -311,6 +313,9 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
             <p className={`text-2xl font-bold ${totalNav >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
               {formatCurrency(totalNav)}
             </p>
+            <p className={`text-xs mt-1 ${totalNavDiscounted >= 0 ? 'text-slate-500' : 'text-red-500 font-medium'}`}>
+              Descontado (VPL): {formatCurrency(totalNavDiscounted)}
+            </p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
@@ -454,7 +459,8 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                 <Th sortKey="empresa">Empresa</Th>
                 <Th sortKey="terminoObras" align="center">Fim das Obras</Th>
                 <Th sortKey="status" align="center">Status</Th>
-                <Th sortKey="nav" align="right">NAV</Th>
+                <Th sortKey="nav" align="right">NAV (Nominal)</Th>
+                <Th sortKey="navDiscounted" align="right">NAV (VPL)</Th>
                 <Th sortKey="recursosFinalizar" align="right" title="Caixa + Pré-chaves a Receber + Saldo a Liberar - Custo a Incorrer - Juros Est.">Recursos (Obras)</Th>
                 <Th sortKey="percGap" align="right" title="% de Vendas necessário para cobrir o Gap de Obras">% Vendas p/ Gap</Th>
                 <Th sortKey="topup" align="right">Top-up Juros Inc.</Th>
@@ -495,6 +501,9 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                     </td>
                     <td className={`px-6 py-4 text-right font-bold ${data.metrics.nav >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
                       {formatCurrencyMillions(data.metrics.nav)}
+                    </td>
+                    <td className={`px-6 py-4 text-right font-medium ${data.metrics.navDiscounted >= 0 ? 'text-slate-600' : 'text-red-500'}`}>
+                      {formatCurrencyMillions(data.metrics.navDiscounted)}
                     </td>
                     <td className={`px-6 py-4 text-right font-medium ${data.metrics.resourcesToFinishWorks >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                       {formatCurrencyMillions(data.metrics.resourcesToFinishWorks)}

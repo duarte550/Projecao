@@ -443,9 +443,12 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
             <h2 className="text-lg font-semibold text-slate-800 mb-4">Métricas de Risco</h2>
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-slate-500">NAV (Net Asset Value)</p>
+                <p className="text-sm text-slate-500">NAV Nominal</p>
                 <p className={`text-2xl font-bold ${data.metrics.nav >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
                   {formatCurrency(data.metrics.nav)}
+                </p>
+                <p className={`text-xs mt-1 font-medium ${data.metrics.navDiscounted >= 0 ? 'text-slate-500' : 'text-red-500'}`}>
+                  VPL (Descontado): {formatCurrency(data.metrics.navDiscounted)}
                 </p>
               </div>
               <div className="h-px bg-slate-100" />

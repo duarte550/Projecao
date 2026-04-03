@@ -103,6 +103,8 @@ export interface MonthlyCashFlow {
   permutaInterest: number;
   permutaBalance: number;
   equityCashFlow: number;
+  discountFactor: number;
+  discountedEquityCashFlow: number;
   accumulatedOutOfPocketInterest: number;
   
   percObras: number;
@@ -113,6 +115,7 @@ export interface MonthlyCashFlow {
 
 export interface ProjectMetrics {
   nav: number;
+  navDiscounted: number;
   totalOutOfPocketInterest: number;
   finalCoverageRatio: number;
   icFinanciamento: number;
