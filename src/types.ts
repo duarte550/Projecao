@@ -33,6 +33,15 @@ export interface ProjectInput {
   vendasPercSinal: number;
   vendasPercPreChaves: number;
   vendasPercPosChaves: number;
+
+  salesProjectionMode?: 'linear' | 'target' | 'historical';
+  targetPercVendasObra?: number;
+  histVendasMensal?: number;
+
+  customSim?: Partial<SimulationParams>;
+  sensMatrix1_Discount?: number;
+  sensMatrix2_Cost?: number;
+  sensMatrix3_Delay?: number;
 }
 
 export interface MacroInput {
@@ -112,6 +121,7 @@ export interface ProjectMetrics {
   remainingStockValue: number;
   maxDiscountBeforeNegativeNav: number;
   resourcesToFinishWorks: number;
+  percVendasParaGap: number;
   statusCurvaOtima: 'OK' | 'Atrasado';
   expectedPercObras: number;
 }

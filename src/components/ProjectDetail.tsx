@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { ProjectInput, SimulationParams, MacroInput } from '../types';
 import { runSimulation } from '../lib/calculations';
-import { formatCurrency, formatPercent } from '../lib/utils';
+import { formatCurrency, formatPercent, formatCurrencyMillions } from '../lib/utils';
 import { exportProjectCashFlowToExcel } from '../lib/exportExcel';
 import { ArrowLeft, TrendingUp, AlertCircle, CheckCircle2, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, BarChart, Bar, ReferenceLine } from 'recharts';
 
 interface ProjectDetailProps {
   project: ProjectInput;
@@ -17,16 +17,79 @@ interface ProjectDetailProps {
 }
 
 export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProject }: ProjectDetailProps) {
-  const [activeTab, setActiveTab] = useState<'dados' | 'premissas' | 'graficos' | 'tabela'>('premissas');
-  const [sim, setSim] = useState<SimulationParams>({
-    costOverrun: 0,
-    delayMonths: 0,
-    salesSpeedMultiplier: 1,
-    discountStock: 0.1,
-    brokerageFee: 0.06,
-  });
+  const [activeTab, setActiveTab] = useState<'dados' | 'premissas' | 'graficos' | 'tabela' | 'sensibilidade'>('premissas');
+  const sim: SimulationParams = {
+    costOverrun: project.customSim?.costOverrun ?? 0,
+    delayMonths: project.customSim?.delayMonths ?? 0,
+    salesSpeedMultiplier: project.customSim?.salesSpeedMultiplier ?? 1,
+    discountStock: project.customSim?.discountStock ?? 0.1,
+    brokerageFee: project.customSim?.brokerageFee ?? 0.06,
+  };
+
+  const setSim = (newSim: SimulationParams) => {
+    if (onUpdateProject) {
+      onUpdateProject({ ...project, customSim: newSim });
+    }
+  };
+
+  const matrix1Discount = project.sensMatrix1_Discount ?? sim.discountStock;
+  const matrix2Cost = project.sensMatrix2_Cost ?? sim.costOverrun;
+  const matrix3Delay = project.sensMatrix3_Delay ?? sim.delayMonths;
 
   const data = useMemo(() => runSimulation(project, sim, macros, baseDate), [project, sim, macros, baseDate]);
+
+  const sensitivityData = useMemo(() => {
+    const delayData = [];
+    for (let d = 0; d <= 24; d += 3) {
+      const res = runSimulation(project, { ...sim, delayMonths: d }, macros, baseDate);
+      delayData.push({ val: `${d}m`, nav: res.metrics.nav });
+    }
+
+    const costData = [];
+    for (let c = 0; c <= 0.5; c += 0.05) {
+      const res = runSimulation(project, { ...sim, costOverrun: c }, macros, baseDate);
+      costData.push({ val: `${(c * 100).toFixed(0)}%`, nav: res.metrics.nav });
+    }
+
+    const discountData = [];
+    for (let d = 0; d <= 0.5; d += 0.05) {
+      const res = runSimulation(project, { ...sim, discountStock: d }, macros, baseDate);
+      discountData.push({ val: `${(d * 100).toFixed(0)}%`, nav: res.metrics.nav });
+    }
+
+    const heatMapDelays = [0, 3, 6, 9, 12, 18, 24];
+    const heatMapCosts = [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30];
+    const heatMapDiscounts = [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30];
+
+    const delayVsCost = heatMapCosts.map(c => {
+      const row: any = { cost: c };
+      heatMapDelays.forEach(d => {
+        const res = runSimulation(project, { ...sim, costOverrun: c, delayMonths: d, discountStock: matrix1Discount }, macros, baseDate);
+        row[`delay_${d}`] = res.metrics.nav;
+      });
+      return row;
+    });
+
+    const delayVsDiscount = heatMapDiscounts.map(disc => {
+      const row: any = { discount: disc };
+      heatMapDelays.forEach(d => {
+        const res = runSimulation(project, { ...sim, discountStock: disc, delayMonths: d, costOverrun: matrix2Cost }, macros, baseDate);
+        row[`delay_${d}`] = res.metrics.nav;
+      });
+      return row;
+    });
+
+    const costVsDiscount = heatMapDiscounts.map(disc => {
+      const row: any = { discount: disc };
+      heatMapCosts.forEach(c => {
+        const res = runSimulation(project, { ...sim, discountStock: disc, costOverrun: c, delayMonths: matrix3Delay }, macros, baseDate);
+        row[`cost_${c}`] = res.metrics.nav;
+      });
+      return row;
+    });
+
+    return { delayData, costData, discountData, heatMapDelays, heatMapCosts, heatMapDiscounts, delayVsCost, delayVsDiscount, costVsDiscount };
+  }, [project, sim, macros, baseDate, matrix1Discount, matrix2Cost, matrix3Delay]);
 
   const chartData = data.cashFlow.map(cf => ({
     name: `Mês ${cf.month}`,
@@ -174,6 +237,14 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
           >
             Dados do Projeto (Edição)
           </button>
+          <button
+            onClick={() => setActiveTab('sensibilidade')}
+            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'sensibilidade' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+            }`}
+          >
+            Análise de Sensibilidade
+          </button>
         </nav>
       </div>
 
@@ -220,6 +291,32 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
               {renderInput('% Recebido no Sinal', 'vendasPercSinal', 'percent', '0.01')}
               {renderInput('% Pré-chaves', 'vendasPercPreChaves', 'percent', '0.01')}
               {renderInput('% Pós-chaves', 'vendasPercPosChaves', 'percent', '0.01')}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 border-b border-slate-100 pb-2 mb-4">Estratégia de Projeção de Vendas Futuras</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Modo de Projeção Base</label>
+                <select 
+                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  value={project.salesProjectionMode || 'linear'}
+                  onChange={(e) => updateField('salesProjectionMode', e.target.value)}
+                >
+                  <option value="linear">Linear até o fim (Estoque)</option>
+                  <option value="target">Meta de Venda ao final da Obra</option>
+                  <option value="historical">Média Histórica (Mensal Constante)</option>
+                </select>
+              </div>
+
+              {project.salesProjectionMode === 'target' && (
+                renderInput('Meta % de Vendas na Entrega', 'targetPercVendasObra', 'percent', '0.01')
+              )}
+
+              {project.salesProjectionMode === 'historical' && (
+                renderInput('Velocidade Mensal Constante (%)', 'histVendasMensal', 'percent', '0.001')
+              )}
             </div>
           </div>
 
@@ -719,6 +816,252 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
             </tbody>
           </table>
         </div>
+      </div>
+      )}
+
+      {activeTab === 'sensibilidade' && (
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <h2 className="text-xl font-bold text-slate-800 mb-6">Análise de Sensibilidade de VPL/NAV</h2>
+        
+        {/* Curvas Unidimensionais */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 h-[300px] flex flex-col">
+            <h3 className="text-sm font-semibold text-slate-700 mb-4">Sensibilidade: Atraso Físico de Obra</h3>
+            <div className="flex-1 min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={sensitivityData.delayData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
+                  <XAxis dataKey="val" tick={{fontSize: 12, fill: '#64748b'}} />
+                  <YAxis tickFormatter={(val) => `R$ ${(val/1000000).toFixed(0)}M`} tick={{fontSize: 12, fill: '#64748b'}} />
+                  <Tooltip formatter={(v: number) => formatCurrency(v)} labelFormatter={(l) => `Atraso: ${l}`} />
+                  <Line type="monotone" dataKey="nav" stroke="#f59e0b" strokeWidth={3} dot={{r: 4, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff'}} name="NAV Projetado" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 h-[300px] flex flex-col">
+            <h3 className="text-sm font-semibold text-slate-700 mb-4">Sensibilidade: Estouro de Orçamento (Sobrecusto)</h3>
+            <div className="flex-1 min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={sensitivityData.costData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
+                  <XAxis dataKey="val" tick={{fontSize: 12, fill: '#64748b'}} />
+                  <YAxis tickFormatter={(val) => `R$ ${(val/1000000).toFixed(0)}M`} tick={{fontSize: 12, fill: '#64748b'}} />
+                  <Tooltip formatter={(v: number) => formatCurrency(v)} labelFormatter={(l) => `Sobrecusto: ${l}`} />
+                  <Line type="monotone" dataKey="nav" stroke="#ef4444" strokeWidth={3} dot={{r: 4, fill: '#ef4444', strokeWidth: 2, stroke: '#fff'}} name="NAV Projetado" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 h-[300px] flex flex-col">
+            <h3 className="text-sm font-semibold text-slate-700 mb-4">Sensibilidade: Desconto Comercial em Estoque</h3>
+            <div className="flex-1 min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={sensitivityData.discountData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <ReferenceLine y={0} stroke="#dc2626" strokeWidth={2} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'NAV Zero', fill: '#dc2626', fontSize: 12, fontWeight: 'bold' }} />
+                  <XAxis dataKey="val" tick={{fontSize: 12, fill: '#64748b'}} />
+                  <YAxis tickFormatter={(val) => `R$ ${(val/1000000).toFixed(0)}M`} tick={{fontSize: 12, fill: '#64748b'}} />
+                  <Tooltip formatter={(v: number) => formatCurrency(v)} labelFormatter={(l) => `Desconto: ${l}`} />
+                  <Line type="monotone" dataKey="nav" stroke="#3b82f6" strokeWidth={3} dot={{r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff'}} name="NAV Projetado" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Matriz 2D / Heatmap (Substituto amigável para Gráfico 3D) */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz de Sensibilidade NAV (Atraso x Sobrecusto)</h3>
+              <p className="text-sm text-slate-500 max-w-2xl">Esta tabela projeta impactos simultâneos de (<strong className="text-slate-700">Risco Físico vs Temporal</strong>). Quadros avermelhados indicam destruição de valor (NAV &lt; 0).</p>
+            </div>
+            <div className="min-w-[200px] bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <div className="flex justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-700">Desconto Estoque (3ª Variável)</label>
+                <span className="text-xs text-slate-500 font-medium">{formatPercent(matrix1Discount)}</span>
+              </div>
+              <input 
+                type="range" min="0" max="0.5" step="0.01" 
+                value={matrix1Discount}
+                onChange={(e) => {
+                  if (onUpdateProject) onUpdateProject({ ...project, sensMatrix1_Discount: parseFloat(e.target.value) });
+                }}
+                className="w-full accent-indigo-600 h-1.5"
+              />
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+            <table className="w-full text-center text-sm font-medium whitespace-nowrap">
+              <thead className="bg-slate-800 text-slate-100 border-b border-slate-800">
+                <tr>
+                  <th className="px-4 py-4 border-r border-slate-700 bg-slate-900 w-40 text-left pl-6">
+                    <span className="block text-slate-400 text-xs uppercase tracking-wider mb-1 mt-1">Sobrecusto↓</span>
+                    <span className="block text-slate-300">Atraso Obra →</span>
+                  </th>
+                  {sensitivityData.heatMapDelays.map(d => (
+                    <th key={d} className="px-4 py-4 text-center font-semibold text-slate-200">{d} Meses</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sensitivityData.delayVsCost.map((row, idx) => (
+                  <tr key={idx} className="border-b last:border-b-0 border-slate-200">
+                    <td className="px-4 py-4 border-r border-slate-200 bg-slate-50 text-slate-800 font-bold shadow-[1px_0_0_0_#e2e8f0] text-left pl-6">
+                      {(row.cost * 100).toFixed(0)}%
+                    </td>
+                    {sensitivityData.heatMapDelays.map(d => {
+                      const nav = row[`delay_${d}`];
+                      const isDanger = nav < 0;
+                      // Mapeamento visual simples de temperatura
+                      let bgClass = "bg-white";
+                      if (isDanger) {
+                        bgClass = nav < -project.vgvTotal * 0.05 ? 'bg-red-100 text-red-900' : 'bg-red-50 text-red-700';
+                      } else {
+                        bgClass = nav > project.vgvTotal * 0.05 ? 'bg-emerald-100 text-emerald-900' : 'bg-emerald-50 text-emerald-700';
+                      }
+                        
+                      return (
+                        <td key={d} className={`px-4 py-4 hover:brightness-95 transition-colors ${bgClass}`}>
+                          <span className={isDanger ? 'font-bold' : ''}>{formatCurrencyMillions(nav)}</span>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz de Sensibilidade NAV (Atraso x Desconto Comercial)</h3>
+              <p className="text-sm text-slate-500">Impacto simultâneo entre impacto de cronograma e estratégia de vendas.</p>
+            </div>
+            <div className="min-w-[200px] bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <div className="flex justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-700">Sobrecusto (3ª Variável)</label>
+                <span className="text-xs text-slate-500 font-medium">{formatPercent(matrix2Cost)}</span>
+              </div>
+              <input 
+                type="range" min="0" max="0.5" step="0.01" 
+                value={matrix2Cost}
+                onChange={(e) => {
+                  if (onUpdateProject) onUpdateProject({ ...project, sensMatrix2_Cost: parseFloat(e.target.value) });
+                }}
+                className="w-full accent-indigo-600 h-1.5"
+              />
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+            <table className="w-full text-center text-sm font-medium whitespace-nowrap">
+              <thead className="bg-slate-800 text-slate-100 border-b border-slate-800">
+                <tr>
+                  <th className="px-4 py-4 border-r border-slate-700 bg-slate-900 w-40 text-left pl-6">
+                    <span className="block text-slate-400 text-xs uppercase tracking-wider mb-1 mt-1">Desconto↓</span>
+                    <span className="block text-slate-300">Atraso Obra →</span>
+                  </th>
+                  {sensitivityData.heatMapDelays.map(d => (
+                    <th key={d} className="px-4 py-4 text-center font-semibold text-slate-200">{d} Meses</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sensitivityData.delayVsDiscount.map((row, idx) => (
+                  <tr key={idx} className="border-b last:border-b-0 border-slate-200">
+                    <td className="px-4 py-4 border-r border-slate-200 bg-slate-50 text-slate-800 font-bold shadow-[1px_0_0_0_#e2e8f0] text-left pl-6">
+                      {(row.discount * 100).toFixed(0)}%
+                    </td>
+                    {sensitivityData.heatMapDelays.map(d => {
+                      const nav = row[`delay_${d}`];
+                      const isDanger = nav < 0;
+                      let bgClass = isDanger 
+                        ? (nav < -project.vgvTotal * 0.05 ? 'bg-red-100 text-red-900' : 'bg-red-50 text-red-700')
+                        : (nav > project.vgvTotal * 0.05 ? 'bg-emerald-100 text-emerald-900' : 'bg-emerald-50 text-emerald-700');
+                        
+                      return (
+                        <td key={d} className={`px-4 py-4 hover:brightness-95 transition-colors ${bgClass}`}>
+                          <span className={isDanger ? 'font-bold' : ''}>{formatCurrencyMillions(nav)}</span>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">Matriz de Sensibilidade NAV (Sobrecusto x Desconto Comercial)</h3>
+              <p className="text-sm text-slate-500">Impacto destrutivo cruzado entre erro de orçamento e dificuldade comercial.</p>
+            </div>
+            <div className="min-w-[200px] bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <div className="flex justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-700">Atraso Obra (3ª Variável)</label>
+                <span className="text-xs text-slate-500 font-medium">{matrix3Delay} meses</span>
+              </div>
+              <input 
+                type="range" min="0" max="24" step="1" 
+                value={matrix3Delay}
+                onChange={(e) => {
+                  if (onUpdateProject) onUpdateProject({ ...project, sensMatrix3_Delay: parseInt(e.target.value) });
+                }}
+                className="w-full accent-indigo-600 h-1.5"
+              />
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+            <table className="w-full text-center text-sm font-medium whitespace-nowrap">
+              <thead className="bg-slate-800 text-slate-100 border-b border-slate-800">
+                <tr>
+                  <th className="px-4 py-4 border-r border-slate-700 bg-slate-900 w-40 text-left pl-6">
+                    <span className="block text-slate-400 text-xs uppercase tracking-wider mb-1 mt-1">Desconto↓</span>
+                    <span className="block text-slate-300">Sobrecusto →</span>
+                  </th>
+                  {sensitivityData.heatMapCosts.map(c => (
+                    <th key={c} className="px-4 py-4 text-center font-semibold text-slate-200">{(c * 100).toFixed(0)}%</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sensitivityData.costVsDiscount.map((row, idx) => (
+                  <tr key={idx} className="border-b last:border-b-0 border-slate-200">
+                    <td className="px-4 py-4 border-r border-slate-200 bg-slate-50 text-slate-800 font-bold shadow-[1px_0_0_0_#e2e8f0] text-left pl-6">
+                      {(row.discount * 100).toFixed(0)}%
+                    </td>
+                    {sensitivityData.heatMapCosts.map(c => {
+                      const nav = row[`cost_${c}`];
+                      const isDanger = nav < 0;
+                      let bgClass = isDanger 
+                        ? (nav < -project.vgvTotal * 0.05 ? 'bg-red-100 text-red-900' : 'bg-red-50 text-red-700')
+                        : (nav > project.vgvTotal * 0.05 ? 'bg-emerald-100 text-emerald-900' : 'bg-emerald-50 text-emerald-700');
+                        
+                      return (
+                        <td key={c} className={`px-4 py-4 hover:brightness-95 transition-colors ${bgClass}`}>
+                          <span className={isDanger ? 'font-bold' : ''}>{formatCurrencyMillions(nav)}</span>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
       )}
     </div>

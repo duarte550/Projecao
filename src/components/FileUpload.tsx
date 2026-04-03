@@ -22,7 +22,9 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
       const wsMacros = wb.Sheets['Macros'] || (wb.SheetNames.length > 1 ? wb.Sheets[wb.SheetNames[1]] : null);
       const wsPremissas = wb.Sheets['Premissas'] || (wb.SheetNames.length > 2 ? wb.Sheets[wb.SheetNames[2]] : null);
       
-      const rawProjects = XLSX.utils.sheet_to_json(wsProjects) as any[];
+      let rawProjects = XLSX.utils.sheet_to_json(wsProjects) as any[];
+      // Filtra a linha 2, que agora contém instruções (ex: "Texto", "R$", "DD/MM/AAAA")
+      rawProjects = rawProjects.filter(r => r['Empresa'] !== 'Texto' && r['Nome do projeto'] !== 'Texto');
 
       const parseNum = (val: any, fallback = 0): number => {
         if (typeof val === 'number') return isNaN(val) ? fallback : val;
@@ -40,6 +42,12 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
           return isNaN(num) ? fallback : num;
         }
         return fallback;
+      };
+
+      const optionalNum = (val: any): number | undefined => {
+        if (val === undefined || val === null || val === '') return undefined;
+        const num = parseNum(val, NaN);
+        return isNaN(num) ? undefined : num;
       };
 
       const parseDate = (val: any): Date => {
@@ -105,13 +113,28 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
           vendasPercSinal: parseNum(row['% recebido de sinal'] || row['% de sinal']),
           vendasPercPreChaves: parseNum(row['% pré-chaves']),
           vendasPercPosChaves: parseNum(row['% pós-chaves']),
+
+          salesProjectionMode: (row['Modo Projeção Vendas (linear/target/historical)'] || row['Modo Projeção Vendas'] || 'linear') as 'linear' | 'target' | 'historical',
+          targetPercVendasObra: parseNum(row['Alvo % Vendas Fim Obra'], 0.8),
+          histVendasMensal: parseNum(row['Média Histórica Vendas Mensal'], 0.05),
+
+          customSim: {
+            costOverrun: optionalNum(row['Override Sim - Sobrecusto']),
+            delayMonths: optionalNum(row['Override Sim - Atraso']),
+            discountStock: optionalNum(row['Override Sim - Desconto']),
+          },
+          sensMatrix1_Discount: optionalNum(row['Matriz Sens 1 - Desconto']),
+          sensMatrix2_Cost: optionalNum(row['Matriz Sens 2 - Sobrecusto']),
+          sensMatrix3_Delay: optionalNum(row['Matriz Sens 3 - Atraso']),
         };
       });
 
       // Parse Macros if available
       let macros: MacroInput[] = [];
       if (wsMacros) {
-        const rawMacros = XLSX.utils.sheet_to_json(wsMacros) as any[];
+        let rawMacros = XLSX.utils.sheet_to_json(wsMacros) as any[];
+        // Filtra a linha 2, que contém instruções
+        rawMacros = rawMacros.filter(r => r['Mês/Ano'] !== 'DD/MM/AAAA');
         macros = rawMacros.map(row => ({
           mesAno: parseDate(row['Mês/Ano']),
           incc: parseNum(row['INCC']),
@@ -205,6 +228,9 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
                 <li>• % de obras</li>
                 <li>• Custo incorrido</li>
                 <li>• Custo a incorrer</li>
+                <li>• Modo Projeção Vendas (linear/target/historical)</li>
+                <li>• Alvo % Vendas Fim Obra</li>
+                <li>• Média Histórica Vendas Mensal</li>
                 <li>• Estoque Atual</li>
                 <li>• Pré-chaves recebido</li>
                 <li>• Pré-chaves a receber atual</li>
@@ -219,6 +245,12 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
                 <li>• Taxa Anual (Permuta)</li>
                 <li>• Indexador (Permuta)</li>
                 <li>• % de permuta dos recebíveis</li>
+                <li>• Override Sim - Sobrecusto (Adicional)</li>
+                <li>• Override Sim - Atraso (Adicional)</li>
+                <li>• Override Sim - Desconto (Adicional)</li>
+                <li>• Matriz Sens 1 - Desconto (Adicional)</li>
+                <li>• Matriz Sens 2 - Sobrecusto (Adicional)</li>
+                <li>• Matriz Sens 3 - Atraso (Adicional)</li>
               </ul>
             </div>
 
@@ -237,6 +269,9 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
               <ul className="text-xs text-slate-500 grid grid-cols-2 gap-2">
                 <li>• Parâmetro (Ex: Data Base da Projeção)</li>
                 <li>• Valor (Ex: 01/05/2026)</li>
+                <li>• Desconto Estoque Pronto</li>
+                <li>• Velocidade de Vendas (Multiplicador)</li>
+                <li>• Corretagem</li>
               </ul>
             </div>
           </div>

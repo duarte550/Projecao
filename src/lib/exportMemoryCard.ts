@@ -16,7 +16,9 @@ export function exportMemoryCard(
     'Estoque Atual', 'Pré-chaves recebido', 'Pré-chaves a receber atual', 'Pós-chaves a receber atual',
     'Posição de Caixa da SPE', 'Saldo do Financiamento atual liberado', 'Saldo do financiamento total',
     'Taxa anual (Fin)', 'Indexador (Fin)', '% de financiamento do projeto',
-    'Saldo no inicio (Permuta)', 'Taxa Anual (Permuta)', 'Indexador (Permuta)', '% de permuta dos recebíveis'
+    'Saldo no inicio (Permuta)', 'Taxa Anual (Permuta)', 'Indexador (Permuta)', '% de permuta dos recebíveis',
+    'Override Sim - Sobrecusto', 'Override Sim - Atraso', 'Override Sim - Desconto',
+    'Matriz Sens 1 - Desconto', 'Matriz Sens 2 - Sobrecusto', 'Matriz Sens 3 - Atraso'
   ];
 
   const projectsRows = projects.map(p => {
@@ -53,7 +55,13 @@ export function exportMemoryCard(
       p.permutaSaldoInicio,
       p.permutaTaxaAnual,
       p.permutaIndexador,
-      p.permutaPercRecebiveis
+      p.permutaPercRecebiveis,
+      p.customSim?.costOverrun ?? '',
+      p.customSim?.delayMonths ?? '',
+      p.customSim?.discountStock ?? '',
+      p.sensMatrix1_Discount ?? '',
+      p.sensMatrix2_Cost ?? '',
+      p.sensMatrix3_Delay ?? ''
     ];
   });
 

@@ -183,6 +183,7 @@ function calculateReceivables(
   input: ProjectInput,
   sim: SimulationParams,
   vgvVendidoMes: number,
+  vgvVendidoTabela: number,
   m: number,
   constructionMonths: number,
   repasseMonthCount: number,
@@ -216,6 +217,9 @@ function calculateReceivables(
 
     repassePool += repasseTotal;
     receivables = receivablesPreChaves;
+  } else if (phase.isGrace) {
+    // Vendas feitas na carência vão para o pool de repasse
+    repassePool += vgvVendidoMes;
   } else if (phase.isRepasse) {
     repasseMonthCount++;
     const remainingRepasseMonths = Math.max(1, 6 - repasseMonthCount + 1);
@@ -225,10 +229,12 @@ function calculateReceivables(
     receivablesRepasse = repasseRecebimento + vgvVendidoMes;
     receivables = receivablesRepasse;
   } else if (phase.isStockSale) {
-    receivablesEstoque = vgvVendidoMes * (1 - sim.discountStock);
+    receivablesEstoque = vgvVendidoMes;
     receivables = receivablesEstoque;
-    estoque -= vgvVendidoMes;
   }
+
+  // Abater o valor de tabela do estoque físico/financeiro referencial independentemente da fase
+  estoque -= vgvVendidoTabela;
 
   return {
     receivables,
@@ -445,6 +451,10 @@ function computeMetrics(
     input.custoAIncorrer - 
     jurosAIncorrerConstrucao;
 
+  const gapObra = Math.max(0, -resourcesToFinishWorks);
+  const vgvDisponivelDuranteObra = input.vgvTotal * ((input.vendasPercSinal || 0.10) + (input.vendasPercPreChaves || 0.15)) * (1 - sim.discountStock);
+  const percVendasParaGap = vgvDisponivelDuranteObra > 0 ? gapObra / vgvDisponivelDuranteObra : 0;
+
   return {
     nav,
     totalOutOfPocketInterest: accumulatedOutOfPocketInterest,
@@ -456,6 +466,7 @@ function computeMetrics(
     remainingStockValue: Math.max(0, currentEstoque),
     maxDiscountBeforeNegativeNav,
     resourcesToFinishWorks,
+    percVendasParaGap,
     statusCurvaOtima,
     expectedPercObras,
   };
@@ -479,10 +490,11 @@ export function runSimulation(
   currentDate.setDate(1);
 
   // ── Parâmetros ajustados pela simulação ──
-  const adjustedCustoAIncorrer = input.custoAIncorrer * (1 + sim.costOverrun);
+  const custoTotalReferencia = input.custoIncorrido + input.custoAIncorrer;
+  const adjustedCustoAIncorrer = input.custoAIncorrer + (custoTotalReferencia * sim.costOverrun);
   const adjustedDataEntrega = addMonths(input.dataEstimadaEntrega, sim.delayMonths);
   const constructionMonths = Math.max(1, differenceInMonths(adjustedDataEntrega, currentDate));
-  const totalMonths = constructionMonths + 3 + 6 + 12; // Construção + Carência + Repasse + Estoque
+  const totalMonths = constructionMonths + 15; // Construção + Carência (3) + Revendas (12 meses totais de escoamento pós-carência)
 
   // ── Estado mutável ao longo da projeção ──
   let pools: INCCPools = {
@@ -549,15 +561,39 @@ export function runSimulation(
     }
 
     // 7. Vendas do mês
-    const vendasMesBase = remainingVendas / totalMonths;
-    const vendasMes = vendasMesBase * (sim.salesSpeedMultiplier ?? 1);
-    const unidadesVendidasMes = (remainingUnits / totalMonths) * (sim.salesSpeedMultiplier ?? 1);
-    const vgvVendidoMes = vendasMes * pools.vgvTotal;
+    let vendasMesBase = remainingVendas / totalMonths; // 'linear' fallback
+
+    if (input.salesProjectionMode === 'target') {
+      const target = input.targetPercVendasObra || input.percVendas;
+      const salesToHitTarget = Math.max(0, target - input.percVendas);
+      const salesLeftAfterTarget = Math.max(0, 1 - target);
+      const monthsPostConst = totalMonths - constructionMonths;
+
+      if (phase.isConstructionPhase) {
+        vendasMesBase = salesToHitTarget / constructionMonths;
+      } else {
+        vendasMesBase = salesLeftAfterTarget / monthsPostConst;
+      }
+    } else if (input.salesProjectionMode === 'historical') {
+      vendasMesBase = input.histVendasMensal || 0;
+    }
+
+    let vendasMes = vendasMesBase * (sim.salesSpeedMultiplier ?? 1);
+    
+    // Limita as vendas para não ultrapassar 100% do projeto
+    vendasMes = Math.min(vendasMes, Math.max(0, 1 - currentPercVendas));
+    
+    const unidadesVendidasMes = input.numeroUnidades * vendasMes;
+    
+    // O usuário definiu que o desconto de estoque (discountStock) deve aplicar em todas as unidades vendidas 
+    // a partir da data de simulação, e não apenas no estoque pronto da fase final.
+    const vgvVendidoTabela = vendasMes * pools.vgvTotal;
+    const vgvVendidoMes = vgvVendidoTabela * (1 - sim.discountStock);
 
     // 8. Recebíveis por fase
     const recResult = calculateReceivables(
       phase, pools, futureInstallments, input, sim,
-      vgvVendidoMes, m, constructionMonths, repasseMonthCount,
+      vgvVendidoMes, vgvVendidoTabela, m, constructionMonths, repasseMonthCount,
     );
     pools.poolPreChaves = recResult.poolPreChaves;
     pools.repassePool = recResult.repassePool;
