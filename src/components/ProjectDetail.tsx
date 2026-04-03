@@ -357,6 +357,7 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
                   <option value="CDI">CDI</option>
                   <option value="INCC">INCC</option>
                   <option value="IPCA">IPCA</option>
+                  <option value="TR">TR</option>
                 </select>
               </div>
             </div>
@@ -378,6 +379,7 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
                   <option value="INCC">INCC</option>
                   <option value="CDI">CDI</option>
                   <option value="IPCA">IPCA</option>
+                  <option value="TR">TR</option>
                 </select>
               </div>
             </div>

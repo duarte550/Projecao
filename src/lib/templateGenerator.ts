@@ -48,13 +48,13 @@ export async function downloadTemplate() {
     { header: 'Saldo do Financiamento atual liberado', unit: 'R$', color: 'FCE7F3', font: '9D174D', width: 35 },
     { header: 'Saldo do financiamento total', unit: 'R$', color: 'FCE7F3', font: '9D174D', width: 30 },
     { header: 'Taxa anual (Fin)', unit: 'Decimal (Ex: 0.12 = 12%)', color: 'FCE7F3', font: '9D174D', width: 25 },
-    { header: 'Indexador (Fin)', unit: 'Texto (Ex: CDI)', color: 'FCE7F3', font: '9D174D', width: 25 },
+    { header: 'Indexador (Fin)', unit: 'Texto (Ex: CDI/TR)', color: 'FCE7F3', font: '9D174D', width: 25 },
     { header: '% de financiamento do projeto', unit: 'Decimal', color: 'FCE7F3', font: '9D174D', width: 30 },
     
     // Permuta (Laranja)
     { header: 'Saldo no inicio (Permuta)', unit: 'R$', color: 'FFEDD5', font: 'C2410C', width: 25 },
     { header: 'Taxa Anual (Permuta)', unit: 'Decimal', color: 'FFEDD5', font: 'C2410C', width: 25 },
-    { header: 'Indexador (Permuta)', unit: 'Texto', color: 'FFEDD5', font: 'C2410C', width: 25 },
+    { header: 'Indexador (Permuta)', unit: 'Texto (Ex: INCC/TR)', color: 'FFEDD5', font: 'C2410C', width: 25 },
     { header: '% de permuta dos recebíveis', unit: 'Decimal', color: 'FFEDD5', font: 'C2410C', width: 30 }
   ];
 
@@ -122,11 +122,12 @@ export async function downloadTemplate() {
     { header: 'Mês/Ano', key: 'mes', width: 20 },
     { header: 'INCC', key: 'incc', width: 15 },
     { header: 'CDI', key: 'cdi', width: 15 },
-    { header: 'IPCA', key: 'ipca', width: 15 }
+    { header: 'IPCA', key: 'ipca', width: 15 },
+    { header: 'TR', key: 'tr', width: 15 }
   ];
-  wsMacros.insertRow(2, ['DD/MM/AAAA', 'Decimal', 'Decimal', 'Decimal']);
+  wsMacros.insertRow(2, ['DD/MM/AAAA', 'Decimal', 'Decimal', 'Decimal', 'Decimal']);
   
-  const macroColors = ['E2E8F0', 'E2E8F0', 'E2E8F0', 'E2E8F0'];
+  const macroColors = ['E2E8F0', 'E2E8F0', 'E2E8F0', 'E2E8F0', 'E2E8F0'];
   macroColors.forEach((color, idx) => {
     const colNumber = idx + 1;
     [1, 2].forEach(rowNum => {
@@ -140,7 +141,7 @@ export async function downloadTemplate() {
 
   let currentDate = new Date();
   for (let i = 0; i < 36; i++) {
-    wsMacros.addRow([format(currentDate, 'MM/dd/yyyy'), 0.05, 0.105, 0.045]);
+    wsMacros.addRow([format(currentDate, 'MM/dd/yyyy'), 0.05, 0.105, 0.045, 0.02]);
     currentDate.setMonth(currentDate.getMonth() + 1);
   }
 

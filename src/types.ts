@@ -49,6 +49,7 @@ export interface MacroInput {
   incc: number;
   cdi: number;
   ipca?: number;
+  tr?: number;
 }
 
 export interface SimulationParams {

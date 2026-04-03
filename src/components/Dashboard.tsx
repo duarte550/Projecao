@@ -551,6 +551,7 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                   <th className="px-6 py-4 text-right">INCC (%)</th>
                   <th className="px-6 py-4 text-right">CDI (%)</th>
                   <th className="px-6 py-4 text-right">IPCA (%)</th>
+                  <th className="px-6 py-4 text-right">TR (%)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -599,6 +600,22 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
                           if (onUpdateMacros) {
                             const newMacros = [...macros];
                             newMacros[idx] = { ...newMacros[idx], ipca: val };
+                            onUpdateMacros(newMacros);
+                          }
+                        }}
+                        className="w-24 text-right bg-white border border-slate-300 rounded px-2 py-1 text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                    </td>
+                    <td className="px-6 py-3 text-right">
+                      <input 
+                        type="number" step="0.001"
+                        value={m.tr || 0}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (isNaN(val)) return;
+                          if (onUpdateMacros) {
+                            const newMacros = [...macros];
+                            newMacros[idx] = { ...newMacros[idx], tr: val };
                             onUpdateMacros(newMacros);
                           }
                         }}

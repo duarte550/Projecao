@@ -28,21 +28,24 @@ interface MacroRates {
   cdiAnnual: number;
   inccAnnual: number;
   ipcaAnnual: number;
+  trAnnual: number;
   cdiMonthly: number;
   inccMonthly: number;
 }
 
-/** Retorna a taxa anual do indexador (CDI / INCC / IPCA). */
+/** Retorna a taxa anual do indexador (CDI / INCC / IPCA / TR). */
 function getIndexerAnnualRate(
   indexador: string,
   cdi: number,
   incc: number,
   ipca: number,
+  tr: number,
 ): number {
   const idx = indexador?.toUpperCase().trim();
   if (idx === 'CDI') return cdi;
   if (idx === 'INCC') return incc;
   if (idx === 'IPCA') return ipca;
+  if (idx === 'TR') return tr;
   return 0;
 }
 
@@ -62,6 +65,7 @@ function computeMonthlyDebtRate(
     rates.cdiAnnual,
     rates.inccAnnual,
     rates.ipcaAnnual,
+    rates.trAnnual,
   );
   const totalAnnual = (1 + spreadAnual) * (1 + indexerRate) - 1;
   return annualToMonthlyRate(totalAnnual);
@@ -78,11 +82,13 @@ function getMacroRatesForMonth(macros: MacroInput[], monthDate: Date): MacroRate
   const cdiAnnual = macroForMonth?.cdi ?? 0.105;
   const inccAnnual = macroForMonth?.incc ?? 0.05;
   const ipcaAnnual = macroForMonth?.ipca ?? 0.045;
+  const trAnnual = macroForMonth?.tr ?? 0.02; // Default de 2% aa caso vazio
 
   return {
     cdiAnnual,
     inccAnnual,
     ipcaAnnual,
+    trAnnual,
     cdiMonthly: annualToMonthlyRate(cdiAnnual),
     inccMonthly: annualToMonthlyRate(inccAnnual),
   };

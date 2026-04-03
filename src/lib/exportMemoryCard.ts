@@ -65,12 +65,13 @@ export function exportMemoryCard(
     ];
   });
 
-  const macroColumns = ['Mês/Ano', 'INCC', 'CDI', 'IPCA'];
+  const macroColumns = ['Mês/Ano', 'INCC', 'CDI', 'IPCA', 'TR'];
   const macroRows = macros.map(m => [
     format(m.mesAno, 'yyyy-MM-dd'),
     m.incc,
     m.cdi,
-    m.ipca
+    m.ipca,
+    m.tr
   ]);
 
   const premissasColumns = ['Parâmetro', 'Valor'];

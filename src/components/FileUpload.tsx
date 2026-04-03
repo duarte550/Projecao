@@ -140,6 +140,7 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
           incc: parseNum(row['INCC']),
           cdi: parseNum(row['CDI']),
           ipca: parseNum(row['IPCA']),
+          tr: parseNum(row['TR']),
         }));
       }
 
@@ -261,6 +262,7 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
                 <li>• INCC</li>
                 <li>• CDI</li>
                 <li>• IPCA</li>
+                <li>• TR</li>
               </ul>
             </div>
 
