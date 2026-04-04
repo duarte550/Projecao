@@ -34,13 +34,13 @@ function HeatMapMatrix({
   colHeaders, rows, thirdVar, onThirdVarChange, companyVGV,
 }: HeatMapMatrixProps) {
   return (
-    <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm">
+    <div className="bg-slate-200 p-6 rounded-xl border border-slate-300 shadow-sm">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
         <div>
           <h3 className="text-lg font-semibold text-slate-800 mb-2">{title}</h3>
           <p className="text-sm text-slate-500">{description}</p>
         </div>
-        <div className="min-w-[200px] bg-white p-3 rounded-lg border border-slate-200">
+        <div className="min-w-[200px] bg-slate-50 p-3 rounded-lg border border-slate-300">
           <div className="flex justify-between mb-1">
             <label className="text-xs font-semibold text-slate-700">{thirdVar.label}</label>
             <span className="text-xs text-slate-500 font-medium">{thirdVar.display}</span>
@@ -53,7 +53,7 @@ function HeatMapMatrix({
           />
         </div>
       </div>
-      <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+      <div className="overflow-x-auto rounded-xl border border-slate-300 shadow-sm">
         <table className="w-full text-center text-sm font-medium whitespace-nowrap">
           <thead className="bg-slate-800 text-slate-100 border-b border-slate-800">
             <tr>
@@ -189,17 +189,17 @@ function YearTable({ title, allYears, projEmpresa, projectYearValues, yearTotals
 
   return (
     <div>
-      <h3 className="text-md font-semibold text-slate-800 mb-4 border-b border-slate-200 pb-2">{title}</h3>
-      <div className="overflow-x-auto rounded-lg border border-slate-200">
+      <h3 className="text-md font-semibold text-slate-800 mb-4 border-b border-slate-300 pb-2">{title}</h3>
+      <div className="overflow-x-auto rounded-lg border border-slate-300">
         <table className="w-full text-left text-sm whitespace-nowrap">
-          <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+          <thead className="bg-slate-200 border-b border-slate-300 text-slate-600 font-medium">
             <tr>
-              <th className="px-4 py-3 sticky left-0 bg-slate-50 z-10 shadow-[1px_0_0_0_#e2e8f0] w-64 min-w-[16rem]">Projeto</th>
+              <th className="px-4 py-3 sticky left-0 bg-slate-200 z-10 shadow-[1px_0_0_0_#cbd5e1] w-64 min-w-[16rem]">Projeto</th>
               {allYears.map(y => <th key={y} className="px-4 py-3 text-right w-32 min-w-[8rem]">{y}</th>)}
-              <th className={`px-4 py-3 text-right border-l border-slate-200 w-40 min-w-[10rem] ${totalHeaderClass}`}>Total Acumulado</th>
+              <th className={`px-4 py-3 text-right border-l border-slate-300 w-40 min-w-[10rem] ${totalHeaderClass}`}>Total Acumulado</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 bg-white">
+          <tbody className="divide-y divide-slate-200 bg-slate-100">
             {projEmpresa.map(p => {
               const projValues = projectYearValues[p.input.id] || {};
               const hasValue = isPositive
@@ -209,8 +209,8 @@ function YearTable({ title, allYears, projEmpresa, projectYearValues, yearTotals
 
               const projTotal = allYears.reduce((sum, y) => sum + (projValues[y] || 0), 0);
               return (
-                <tr key={p.input.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-slate-900 sticky left-0 bg-white shadow-[1px_0_0_0_#e2e8f0] truncate max-w-[200px]" title={p.input.nome}>
+                <tr key={p.input.id} className="hover:bg-slate-200 transition-colors">
+                  <td className="px-4 py-3 font-medium text-slate-900 sticky left-0 bg-slate-100 shadow-[1px_0_0_0_#cbd5e1] truncate max-w-[200px]" title={p.input.nome}>
                     {p.input.nome}
                   </td>
                   {allYears.map(y => {
@@ -222,7 +222,7 @@ function YearTable({ title, allYears, projEmpresa, projectYearValues, yearTotals
                       </td>
                     );
                   })}
-                  <td className={`px-4 py-3 text-right ${totalColorClass} font-bold border-l border-slate-200 ${isPositive ? 'bg-emerald-50/30' : 'bg-rose-50/30'}`}>
+                  <td className={`px-4 py-3 text-right ${totalColorClass} font-bold border-l border-slate-300 ${isPositive ? 'bg-emerald-50/30' : 'bg-rose-50/30'}`}>
                     {formatCurrencyMillions(projTotal)}
                   </td>
                 </tr>
@@ -358,7 +358,7 @@ export function ConsolidatorTab({
   const navLabel = navType === 'vpl' ? 'Descontado' : 'Nominal';
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mt-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="bg-slate-100 p-6 rounded-xl shadow-sm border border-slate-300 mt-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
@@ -366,16 +366,16 @@ export function ConsolidatorTab({
           <p className="text-sm text-slate-500">Visualização de aportes e análise de sensibilidade.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+          <div className="flex bg-slate-300 p-1 rounded-lg border border-slate-400">
             <button
               onClick={() => setNavType('vpl')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${navType === 'vpl' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${navType === 'vpl' ? 'bg-slate-100 text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
             >
               VPL Descontado
             </button>
             <button
               onClick={() => setNavType('nominal')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${navType === 'nominal' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${navType === 'nominal' ? 'bg-slate-100 text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
             >
               NAV Nominal
             </button>
@@ -384,7 +384,7 @@ export function ConsolidatorTab({
             <label className="text-sm font-medium text-slate-700 mr-2 whitespace-nowrap">Comparar:</label>
             <select
               value={selectedEmpresa} onChange={(e) => setSelectedEmpresa(e.target.value)}
-              className="pl-3 pr-8 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500"
+              className="pl-3 pr-8 py-2 border border-slate-400 rounded-lg text-sm bg-slate-200 outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {companies.map(emp => <option key={emp} value={emp}>{emp}</option>)}
             </select>
@@ -393,7 +393,7 @@ export function ConsolidatorTab({
       </div>
 
       {selectedEmpresa === 'Todas' ? (
-        <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-slate-500">
+        <div className="text-center py-12 bg-slate-200 rounded-xl border border-dashed border-slate-400 text-slate-500">
           Selecione uma empresa específica no filtro acima para visualizar a consolidação de aportes.
         </div>
       ) : (
@@ -420,33 +420,33 @@ export function ConsolidatorTab({
 
           {/* NAV Composition */}
           <div>
-            <h3 className="text-md font-semibold text-slate-800 mb-4 border-b border-slate-200 pb-2">Composição do NAV (R$)</h3>
-            <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <h3 className="text-md font-semibold text-slate-800 mb-4 border-b border-slate-300 pb-2">Composição do NAV (R$)</h3>
+            <div className="overflow-x-auto rounded-lg border border-slate-300">
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                <thead className="bg-slate-200 border-b border-slate-300 text-slate-600 font-medium">
                   <tr>
                     <th className="px-4 py-3">Projeto</th>
                     <th className="px-4 py-3 text-right">Geração de Caixa</th>
-                    <th className="px-4 py-3 text-right border-l border-slate-200">NAV {navLabel}</th>
+                    <th className="px-4 py-3 text-right border-l border-slate-300">NAV {navLabel}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody className="divide-y divide-slate-200 bg-slate-100">
                   {projEmpresa.map(p => {
                     const nav = navType === 'vpl' ? p.metrics.navDiscounted : p.metrics.nav;
                     const geração = p.cashFlow
                       .filter(cf => (navType === 'vpl' ? cf.discountedEquityCashFlow : cf.equityCashFlow) > 0)
                       .reduce((s, cf) => s + (navType === 'vpl' ? cf.discountedEquityCashFlow : cf.equityCashFlow), 0);
                     return (
-                      <tr key={p.input.id} className="hover:bg-slate-50 transition-colors">
+                      <tr key={p.input.id} className="hover:bg-slate-200 transition-colors">
                         <td className="px-4 py-3 font-medium text-slate-900">{p.input.nome}</td>
                         <td className="px-4 py-3 text-right text-emerald-600">{formatCurrencyMillions(geração)}</td>
-                        <td className={`px-4 py-3 text-right font-bold border-l border-slate-200 ${nav >= 0 ? 'text-emerald-700 bg-emerald-50/30' : 'text-rose-700 bg-rose-50/30'}`}>
+                        <td className={`px-4 py-3 text-right font-bold border-l border-slate-300 ${nav >= 0 ? 'text-emerald-700 bg-emerald-50/30' : 'text-rose-700 bg-rose-50/30'}`}>
                           {formatCurrencyMillions(nav)}
                         </td>
                       </tr>
                     );
                   })}
-                  <tr className="bg-slate-50">
+                  <tr className="bg-slate-200">
                     <td className="px-4 py-3 font-bold text-slate-900 text-right">Somatório (Consolidado)</td>
                     <td className="px-4 py-3 text-right font-bold text-emerald-700">
                       {formatCurrencyMillions(
@@ -458,7 +458,7 @@ export function ConsolidatorTab({
                         )
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right font-bold text-slate-900 border-l border-slate-200 bg-slate-100">
+                    <td className="px-4 py-3 text-right font-bold text-slate-900 border-l border-slate-300 bg-slate-300">
                       {formatCurrencyMillions(projEmpresa.reduce((sum, p) => sum + (navType === 'vpl' ? p.metrics.navDiscounted : p.metrics.nav), 0))}
                     </td>
                   </tr>
@@ -469,8 +469,8 @@ export function ConsolidatorTab({
 
           {/* Sensitivity analysis */}
           {sensitivityData && (
-            <div className="mt-12 bg-white rounded-xl shadow-sm border border-slate-200">
-              <div className="p-6 border-b border-slate-200">
+            <div className="mt-12 bg-slate-100 rounded-xl shadow-sm border border-slate-300">
+              <div className="p-6 border-b border-slate-300">
                 <h2 className="text-xl font-bold text-slate-800">Sensibilidade Consolidada (Global NAV)</h2>
                 <p className="text-sm text-slate-500 mt-1">
                   Soma do reflexo do NAV de TODOS os projetos da {selectedEmpresa} sob estresse agregado.

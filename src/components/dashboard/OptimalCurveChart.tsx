@@ -57,7 +57,7 @@ function ChartTooltip({ active, payload }: any) {
 
 export function OptimalCurveChart({ optimalCurveData, projectPoints }: Props) {
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+    <div className="bg-slate-100 p-6 rounded-xl shadow-sm border border-slate-300">
       <h2 className="text-lg font-semibold text-slate-800 mb-6">Status dos Projetos vs. Curva Ótima</h2>
       <div className="h-[400px]">
         <ResponsiveContainer width="100%" height="100%">

@@ -25,7 +25,7 @@ export default function App() {
   const selectedProject = projects.find(p => p.id === selectedProjectId);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+    <div className="min-h-screen bg-gray-100 font-sans text-slate-900">
       {/* Top Navigation */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-[95%] 2xl:max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8">

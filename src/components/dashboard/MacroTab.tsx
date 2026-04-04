@@ -24,8 +24,8 @@ export function MacroTab({ macros, onUpdateMacros }: Props) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="p-6 border-b border-slate-200">
+    <div className="bg-slate-100 rounded-xl shadow-sm border border-slate-300 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="p-6 border-b border-slate-300">
         <h2 className="text-lg font-semibold text-slate-800">Projeções Macroeconômicas</h2>
         <p className="text-sm text-slate-500 mt-1">
           Os valores abaixo foram carregados da planilha de Input, mas você pode ajustá-los em tempo real aqui.
@@ -35,7 +35,7 @@ export function MacroTab({ macros, onUpdateMacros }: Props) {
       </div>
       <div className="overflow-x-auto max-h-[600px]">
         <table className="w-full text-left text-sm whitespace-nowrap">
-          <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium sticky top-0 z-10 shadow-[0_1px_0_0_#e2e8f0]">
+          <thead className="bg-slate-200 border-b border-slate-300 text-slate-600 font-medium sticky top-0 z-10 shadow-[0_1px_0_0_#cbd5e1]">
             <tr>
               <th className="px-6 py-4">Mês/Ano</th>
               {MACRO_FIELDS.map(f => (
@@ -43,9 +43,9 @@ export function MacroTab({ macros, onUpdateMacros }: Props) {
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-slate-300">
             {macros.map((m, idx) => (
-              <tr key={idx} className="hover:bg-slate-50 transition-colors">
+              <tr key={idx} className="hover:bg-slate-200 transition-colors">
                 <td className="px-6 py-3 text-slate-900 font-medium">{format(m.mesAno, 'MM/yyyy')}</td>
                 {MACRO_FIELDS.map(f => (
                   <td key={String(f.key)} className="px-6 py-3 text-right">

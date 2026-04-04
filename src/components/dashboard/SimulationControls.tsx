@@ -9,7 +9,7 @@ interface Props {
 
 export function SimulationControls({ sim, onChange }: Props) {
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+    <div className="bg-slate-100 p-6 rounded-xl shadow-sm border border-slate-300">
       <h2 className="text-lg font-semibold text-slate-800 mb-4">Simulação Global (Estresse)</h2>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div>

@@ -13,7 +13,7 @@ interface Props {
 export function KPICards({ totalNav, totalNavDiscounted, totalOutOfPocket, projectsAtRisk, totalProjects }: Props) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+      <div className="bg-slate-100 p-6 rounded-xl shadow-sm border border-slate-300 flex items-center gap-4">
         <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg">
           <Building2 className="w-6 h-6" />
         </div>
@@ -28,7 +28,7 @@ export function KPICards({ totalNav, totalNavDiscounted, totalOutOfPocket, proje
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+      <div className="bg-slate-100 p-6 rounded-xl shadow-sm border border-slate-300 flex items-center gap-4">
         <div className="p-3 bg-rose-50 text-rose-600 rounded-lg">
           <TrendingDown className="w-6 h-6" />
         </div>
@@ -38,7 +38,7 @@ export function KPICards({ totalNav, totalNavDiscounted, totalOutOfPocket, proje
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+      <div className="bg-slate-100 p-6 rounded-xl shadow-sm border border-slate-300 flex items-center gap-4">
         <div className="p-3 bg-amber-50 text-amber-600 rounded-lg">
           <AlertTriangle className="w-6 h-6" />
         </div>

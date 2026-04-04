@@ -85,24 +85,24 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
       </div>
 
       {/* Tab bar + actions */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 sticky top-16 z-20">
-        <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-100 p-4 rounded-xl shadow-sm border border-slate-300 mb-6 sticky top-16 z-20">
+        <div className="flex gap-2 p-1 bg-slate-300 rounded-lg">
           {tabs.map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tab.key ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tab.key ? 'bg-slate-100 text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
             >
               {tab.label}
             </button>
           ))}
         </div>
         <div className="flex gap-3">
-          <button onClick={() => exportMemoryCard(projects, macros, globalSim, baseDate)} className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg text-sm font-medium transition-colors">
+          <button onClick={() => exportMemoryCard(projects, macros, globalSim, baseDate)} className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300 rounded-lg text-sm font-medium transition-colors">
             <Save className="w-4 h-4" />
             Salvar Memory Card (Input)
           </button>
-          <button onClick={() => downloadCashFlows(projectDataList)} className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm text-slate-700">
+          <button onClick={() => downloadCashFlows(projectDataList)} className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-400 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors shadow-sm text-slate-700">
             <Download className="w-4 h-4" />
             Exportar Série (CVM)
           </button>

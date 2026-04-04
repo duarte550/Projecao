@@ -24,7 +24,7 @@ function Th({ children, sortKey, align = 'left', title, sortConfig, onSort }: Th
   const isSorted = sortConfig?.key === sortKey;
   return (
     <th
-      className={`px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors select-none text-${align}`}
+      className={`px-6 py-4 cursor-pointer hover:bg-slate-300 transition-colors select-none text-${align}`}
       title={title}
       onClick={() => onSort(sortKey)}
     >
@@ -100,7 +100,7 @@ export function ProjectsTable({ projectDataList, onSelectProject, selectedEmpres
 
   return (
     <>
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200 mt-6">
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-100 p-4 rounded-xl shadow-sm border border-slate-300 mt-6">
         <h2 className="text-lg font-semibold text-slate-800">Carteira de Projetos ({sortedProjects.length})</h2>
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <div className="relative">
@@ -108,14 +108,14 @@ export function ProjectsTable({ projectDataList, onSelectProject, selectedEmpres
             <input
               type="text" placeholder="Buscar projeto..."
               value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm w-full sm:w-64 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow"
+              className="pl-9 pr-4 py-2 border border-slate-400 rounded-lg text-sm w-full sm:w-64 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow"
             />
           </div>
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <select
               value={selectedEmpresa} onChange={(e) => setSelectedEmpresa(e.target.value)}
-              className="pl-9 pr-8 py-2 border border-slate-300 rounded-lg text-sm w-full sm:w-48 appearance-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow bg-white"
+              className="pl-9 pr-8 py-2 border border-slate-400 rounded-lg text-sm w-full sm:w-48 appearance-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow bg-white"
             >
               {companies.map(emp => <option key={emp} value={emp}>{emp}</option>)}
             </select>
@@ -123,10 +123,10 @@ export function ProjectsTable({ projectDataList, onSelectProject, selectedEmpres
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-slate-100 rounded-xl shadow-sm border border-slate-300 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap group">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+            <thead className="bg-slate-200 border-b border-slate-300 text-slate-600 font-medium">
               <tr>
                 <Th sortKey="nome" {...thProps}>Projeto</Th>
                 <Th sortKey="empresa" {...thProps}>Empresa</Th>
@@ -151,7 +151,7 @@ export function ProjectsTable({ projectDataList, onSelectProject, selectedEmpres
                 return (
                   <tr
                     key={data.input.id}
-                    className={`transition-colors ${data.metrics.nav < 0 ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-slate-50'}`}
+                    className={`transition-colors ${data.metrics.nav < 0 ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-slate-200'}`}
                   >
                     <td className="px-6 py-4 font-medium text-slate-900">
                       <button
