@@ -31,6 +31,7 @@ export async function downloadTemplate() {
     { header: 'Modo Projeção Vendas (linear/target/historical)', unit: 'Texto', color: 'DBEAFE', font: '1E40AF', width: 45 },
     { header: 'Alvo % Vendas Fim Obra', unit: 'Decimal', color: 'DBEAFE', font: '1E40AF', width: 25 },
     { header: 'Média Histórica Vendas Mensal', unit: 'Decimal', color: 'DBEAFE', font: '1E40AF', width: 30 },
+    { header: 'Carência Vendas (meses)', unit: 'Inteiro', color: 'DBEAFE', font: '1E40AF', width: 25 },
     
     // Engenharia (Amarelo)
     { header: '% de obras', unit: 'Decimal', color: 'FEF3C7', font: '92400E', width: 20 },
@@ -104,6 +105,7 @@ export async function downloadTemplate() {
       p.salesProjectionMode || 'linear',
       p.targetPercVendasObra || 0.8,
       p.histVendasMensal || 0.05,
+      p.carenciaVendas || 0,
       p.percObras,
       p.custoIncorrido,
       p.custoAIncorrer,
@@ -177,6 +179,7 @@ export async function downloadTemplate() {
   wsPremissas.addRow(['Carrego Estoque (Baixo Padrão)', 20]);
   wsPremissas.addRow(['Carrego Estoque (Médio Padrão)', 25]);
   wsPremissas.addRow(['Carrego Estoque (Alto Padrão)', 28]);
+  wsPremissas.addRow(['Cap de Vendas Mensal (%)', '']);
 
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

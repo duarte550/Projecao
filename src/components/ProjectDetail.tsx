@@ -14,21 +14,24 @@ interface ProjectDetailProps {
   baseDate: Date;
   onBack: () => void;
   onUpdateProject?: (project: ProjectInput) => void;
+  globalSim: SimulationParams;
 }
 
-export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProject }: ProjectDetailProps) {
+export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProject, globalSim }: ProjectDetailProps) {
   const [activeTab, setActiveTab] = useState<'dados' | 'premissas' | 'graficos' | 'tabela' | 'sensibilidade'>('premissas');
   const [navType, setNavType] = useState<'nominal' | 'vpl'>('vpl');
   const [outrosCustosExpanded, setOutrosCustosExpanded] = useState(false);
   const sim: SimulationParams = {
+    ...globalSim,
     costOverrun: project.customSim?.costOverrun ?? 0,
     delayMonths: project.customSim?.delayMonths ?? 0,
     salesSpeedMultiplier: project.customSim?.salesSpeedMultiplier ?? 1,
-    discountStock: project.customSim?.discountStock ?? 0.1,
-    brokerageFee: project.customSim?.brokerageFee ?? 0.06,
-    carregoBaixo: project.customSim?.carregoBaixo ?? 20,
-    carregoMedio: project.customSim?.carregoMedio ?? 25,
-    carregoAlto: project.customSim?.carregoAlto ?? 28,
+    discountStock: project.customSim?.discountStock ?? globalSim.discountStock,
+    brokerageFee: project.customSim?.brokerageFee ?? globalSim.brokerageFee,
+    carregoBaixo: project.customSim?.carregoBaixo ?? globalSim.carregoBaixo,
+    carregoMedio: project.customSim?.carregoMedio ?? globalSim.carregoMedio,
+    carregoAlto: project.customSim?.carregoAlto ?? globalSim.carregoAlto,
+    capVendasMensal: project.customSim?.capVendasMensal ?? globalSim.capVendasMensal,
   };
 
   const setSim = (newSim: SimulationParams) => {
@@ -215,6 +218,28 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
         </div>
       </div>
 
+      {data.metrics.salesCapBreaches && data.metrics.salesCapBreaches.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3 mt-4">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <h4 className="text-sm font-semibold text-amber-800">Aviso: Cap de Vendas Mensal Excedido</h4>
+            <p className="text-sm text-amber-700 mt-1">
+              Este projeto ultrapassou o teto macro de {((data.simulation.capVendasMensal || 0) * 100).toFixed(1)}% nas vendas projetadas dos seguintes meses:
+            </p>
+            <div className="mt-2 text-xs font-medium text-amber-800 flex flex-wrap gap-2">
+              {data.metrics.salesCapBreaches.map((b, i) => (
+                <span key={i} className="inline-flex items-center bg-amber-100 px-2.5 py-1 rounded-md border border-amber-200">
+                  Mês {b.month} <span className="opacity-75 ml-1">({(b.vendasMes * 100).toFixed(2)}%)</span>
+                </span>
+              ))}
+            </div>
+            <p className="text-xs text-amber-600 mt-2">
+              Nota: O simulador não restringe as vendas, ele apenas emite este alerta. Ajuste a curva de projeção ou distribua as metas de venda se desejado.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Tabs Header */}
       <div className="border-b border-slate-200">
         <nav className="-mb-px flex space-x-8 overflow-x-auto">
@@ -293,12 +318,13 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
 
             <div>
               <h3 className="text-sm font-semibold text-slate-700 border-b border-slate-100 pb-2 mb-4">Comercial</h3>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {renderInput('VGV Total (R$)', 'vgvTotal', 'number', '1000')}
                 {renderInput('% Vendas Atual', 'percVendas', 'percent', '0.01')}
                 {renderInput('% Recebido no Sinal', 'vendasPercSinal', 'percent', '0.01')}
                 {renderInput('% Pré-chaves', 'vendasPercPreChaves', 'percent', '0.01')}
                 {renderInput('% Pós-chaves', 'vendasPercPosChaves', 'percent', '0.01')}
+                {renderInput('Carência Vendas (meses)', 'carenciaVendas', 'number', '1')}
               </div>
             </div>
 

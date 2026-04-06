@@ -376,7 +376,8 @@ function waterfallPostConstruction(
   receivables: number,
   minimumCaixa: number,
   isRepasseOrLater: boolean,
-  permutaCashSweep?: boolean
+  permutaCashSweep?: boolean,
+  isGrace?: boolean
 ): WaterfallResult {
 
   let permutaPayment = 0;
@@ -391,7 +392,7 @@ function waterfallPostConstruction(
   availableCash -= finInterestPaid;
 
   const sweepBuffer = isRepasseOrLater ? 0 : minimumCaixa;
-  let cashAvailableForSweep = Math.max(0, availableCash - sweepBuffer);
+  let cashAvailableForSweep = isGrace ? 0 : Math.max(0, availableCash - sweepBuffer);
 
   let finAmortization = 0;
   if (cashAvailableForSweep > 0) {
@@ -414,14 +415,24 @@ function waterfallPostConstruction(
   let equityCashFlow = 0;
   let finalCaixa: number;
 
-  if (caixaFinal > targetMin) {
-    equityCashFlow = caixaFinal - targetMin; // Distribuição
-    finalCaixa = targetMin;
-  } else if (caixaFinal < targetMin) {
-    equityCashFlow = -(targetMin - caixaFinal); // Aporte
-    finalCaixa = targetMin;
+  if (isGrace) {
+    if (caixaFinal < targetMin) {
+      equityCashFlow = -(targetMin - caixaFinal); // Aporte
+      finalCaixa = targetMin;
+    } else {
+      equityCashFlow = 0; // Sem distribuição na carência
+      finalCaixa = caixaFinal; // Mantém o excedente no caixa
+    }
   } else {
-    finalCaixa = caixaFinal;
+    if (caixaFinal > targetMin) {
+      equityCashFlow = caixaFinal - targetMin; // Distribuição
+      finalCaixa = targetMin;
+    } else if (caixaFinal < targetMin) {
+      equityCashFlow = -(targetMin - caixaFinal); // Aporte
+      finalCaixa = targetMin;
+    } else {
+      finalCaixa = caixaFinal;
+    }
   }
 
 
@@ -450,7 +461,8 @@ function computeMetrics(
   sim: SimulationParams,
   accumulatedOutOfPocketInterest: number,
   currentEstoque: number,
-  jurosAIncorrerConstrucao: number
+  jurosAIncorrerConstrucao: number,
+  salesCapBreaches: { month: number; date: Date; vendasMes: number }[]
 ): ProjectMetrics {
   const nav = cashFlow.reduce((sum, cf) => sum + cf.equityCashFlow, 0);
   const navDiscounted = cashFlow.reduce((sum, cf) => sum + cf.discountedEquityCashFlow, 0);
@@ -508,6 +520,7 @@ function computeMetrics(
     percVendasParaGap,
     statusCurvaOtima,
     expectedPercObras,
+    salesCapBreaches,
   };
 }
 
@@ -560,6 +573,7 @@ export function runSimulation(
 
   const cashFlow: MonthlyCashFlow[] = [];
   let cumulativeDiscountFactor = 1;
+  const salesCapBreaches: { month: number; date: Date; vendasMes: number }[] = [];
 
   // ── Variáveis para cálculo da Beta e Reembolso ──
   const dtInicioObras = new Date(input.dataInicioObras);
@@ -575,8 +589,8 @@ export function runSimulation(
 
   // Estimar o custo andado no Mês 0 (anterior ao Mês 1) para gerar o primeiro reembolso
   const mes_0_obra = (currentDate.getFullYear() - dtInicioObras.getFullYear()) * 12 +
-                     (currentDate.getMonth() - dtInicioObras.getMonth()) + 1;
-                     
+    (currentDate.getMonth() - dtInicioObras.getMonth()) + 1;
+
   if (input.percObras < 1) {
     let w_mes_0 = 0;
     if (mes_0_obra >= 1 && mes_0_obra <= n_meses_obra) {
@@ -629,15 +643,15 @@ export function runSimulation(
     let requestedDrawdown = 0;
     const mode = input.finModalidadeLiberacao || 'perc_financiamento';
     if (mode === '100%_custo') {
-       requestedDrawdown = pastConstructionCost;
+      requestedDrawdown = pastConstructionCost;
     } else {
-       requestedDrawdown = pastConstructionCost * (input.finPercFinanciamento ?? 0);
+      requestedDrawdown = pastConstructionCost * (input.finPercFinanciamento ?? 0);
     }
 
     if (phase.isConstructing) {
       const mes_atual_obra = (currentMonthDate.getFullYear() - dtInicioObras.getFullYear()) * 12 +
-                             (currentMonthDate.getMonth() - dtInicioObras.getMonth()) + 1;
-      
+        (currentMonthDate.getMonth() - dtInicioObras.getMonth()) + 1;
+
       let w_mes = 0;
       if (mes_atual_obra >= 1 && mes_atual_obra <= n_meses_obra) {
         w_mes = calculateConstructionProgress(n_meses_obra, mes_atual_obra);
@@ -646,7 +660,7 @@ export function runSimulation(
       }
 
       if (w_mes <= 0 && currentPercObras < 1) {
-         w_mes = (1 - currentPercObras) / remainingConstMonths;
+        w_mes = (1 - currentPercObras) / remainingConstMonths;
       }
 
       if (remainingConstMonths <= 1) {
@@ -658,7 +672,7 @@ export function runSimulation(
       // Custo do mês é exatamente o Custo Total Projetado Atualizado * o % de obras daquele mês
       const percentualRestante = Math.max(0.0001, 1 - currentPercObras);
       const custoTotalProjetadoAtualizado = pools.costAIncorrer / percentualRestante;
-      
+
       constructionCost = custoTotalProjetadoAtualizado * obrasMes;
       constructionCost = Math.min(constructionCost, pools.costAIncorrer);
 
@@ -666,35 +680,53 @@ export function runSimulation(
     }
 
     // 7. Vendas do mês
-    let vendasMesBase = remainingVendas / totalMonths; // 'linear' fallback
+    const carenciaVendas = input.carenciaVendas ?? 0;
+    let vendasMesBase = 0;
 
-    if (input.salesProjectionMode === 'target') {
-      const target = input.targetPercVendasObra || input.percVendas;
-      const salesToHitTarget = Math.max(0, target - input.percVendas);
-      const salesLeftAfterTarget = Math.max(0, 1 - target);
-      const monthsPostConst = totalMonths - constructionMonths;
+    if (m <= carenciaVendas) {
+      vendasMesBase = 0;
+    } else {
+      if (input.salesProjectionMode === 'target') {
+        const target = input.targetPercVendasObra || input.percVendas;
+        const salesToHitTarget = Math.max(0, target - input.percVendas);
+        const salesLeftAfterTarget = Math.max(0, 1 - target);
+        const effectiveConstMonths = Math.max(1, constructionMonths - carenciaVendas);
+        const monthsPostConst = Math.max(1, totalMonths - Math.max(constructionMonths, carenciaVendas));
 
-      if (phase.isConstructionPhase) {
-        vendasMesBase = salesToHitTarget / constructionMonths;
-      } else {
-        vendasMesBase = salesLeftAfterTarget / monthsPostConst;
-      }
-    } else if (input.salesProjectionMode === 'historical') {
-      vendasMesBase = input.histVendasMensal || 0;
-    } else if (input.salesProjectionMode === 'optimal_delta') {
-      if (phase.isConstructionPhase) {
-        const nextPercObras = Math.min(1, currentPercObras + obrasMes);
-        const nextOptimalSales = calculateOptimalSales(nextPercObras);
-        let targetVendas = nextOptimalSales - initialSalesDelta;
-        targetVendas = Math.max(currentPercVendas, targetVendas); // Evitar vendas negativas
-        vendasMesBase = targetVendas - currentPercVendas;
-      } else {
-        const monthsPostConst = totalMonths - constructionMonths;
-        vendasMesBase = monthsPostConst > 0 ? (1 - currentPercVendas) / monthsPostConst : (1 - currentPercVendas);
+        if (phase.isConstructionPhase) {
+          vendasMesBase = salesToHitTarget / effectiveConstMonths;
+        } else {
+          vendasMesBase = salesLeftAfterTarget / monthsPostConst;
+        }
+      } else if (input.salesProjectionMode === 'historical') {
+        vendasMesBase = input.histVendasMensal || 0;
+      } else if (input.salesProjectionMode === 'optimal_delta') {
+        if (phase.isConstructionPhase) {
+          const nextPercObras = Math.min(1, currentPercObras + obrasMes);
+          const nextOptimalSales = calculateOptimalSales(nextPercObras);
+          let targetVendas = nextOptimalSales - initialSalesDelta;
+          targetVendas = Math.max(currentPercVendas, targetVendas); // Evitar vendas negativas
+          vendasMesBase = targetVendas - currentPercVendas;
+        } else {
+          const monthsPostConst = Math.max(1, totalMonths - Math.max(constructionMonths, carenciaVendas));
+          vendasMesBase = (1 - currentPercVendas) / monthsPostConst;
+        }
+      } else { // 'linear' fallback
+        const localTotalMonths = Math.max(1, totalMonths - carenciaVendas);
+        vendasMesBase = remainingVendas / localTotalMonths;
       }
     }
 
     let vendasMes = vendasMesBase * (sim.salesSpeedMultiplier ?? 1);
+
+    // Avalia o cap de vendas, mas apenas registra sem travar a venda
+    if (sim.capVendasMensal !== undefined && sim.capVendasMensal !== null && vendasMes > sim.capVendasMensal) {
+      salesCapBreaches.push({
+        month: m,
+        date: currentMonthDate,
+        vendasMes: vendasMes
+      });
+    }
 
     // Limita as vendas para não ultrapassar 100% do projeto
     vendasMes = Math.min(vendasMes, Math.max(0, 1 - currentPercVendas));
@@ -750,13 +782,13 @@ export function runSimulation(
 
     let custoCarregoEstoque = 0;
     if (m > constructionMonths + 3) {
-       let valorM2 = sim.carregoMedio ?? 25;
-       if (input.padrao === 'Baixo') valorM2 = sim.carregoBaixo ?? 20;
-       if (input.padrao === 'Alto') valorM2 = sim.carregoAlto ?? 28;
+      let valorM2 = sim.carregoMedio ?? 25;
+      if (input.padrao === 'Baixo') valorM2 = sim.carregoBaixo ?? 20;
+      if (input.padrao === 'Alto') valorM2 = sim.carregoAlto ?? 28;
 
-       const numUnidadesEstoque = input.numeroUnidades * estoqueRemanescentePerc;
-       const metragemEstoque = numUnidadesEstoque * (input.metragemMedia || 0);
-       custoCarregoEstoque = metragemEstoque * valorM2;
+      const numUnidadesEstoque = input.numeroUnidades * estoqueRemanescentePerc;
+      const metragemEstoque = numUnidadesEstoque * (input.metragemMedia || 0);
+      custoCarregoEstoque = metragemEstoque * valorM2;
     }
 
     let custosJuridicos = 0;
@@ -801,7 +833,8 @@ export function runSimulation(
         recResult.receivables,
         minimumCaixa,
         m === totalMonths,
-        input.permutaCashSweep
+        input.permutaCashSweep,
+        phase.isGrace
       );
     }
 
@@ -851,7 +884,7 @@ export function runSimulation(
       permutaBalanceInicial,
       permutaInterest,
       permutaBalance: currentPermutaBalance,
-      
+
       outrosCustosVgv,
       custoCarregoEstoque,
       custosJuridicos,
@@ -889,7 +922,8 @@ export function runSimulation(
     sim,
     accumulatedOutOfPocketInterest,
     pools.estoque,
-    jurosStatic
+    jurosStatic,
+    salesCapBreaches
   );
 
   return { input, simulation: sim, cashFlow, metrics };

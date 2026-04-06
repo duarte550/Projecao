@@ -17,25 +17,16 @@ interface DashboardProps {
   baseDate: Date;
   onSelectProject: (id: string) => void;
   onUpdateMacros?: (macros: MacroInput[]) => void;
-  initialSim?: Partial<SimulationParams>;
+  globalSim: SimulationParams;
+  onChangeGlobalSim: (sim: SimulationParams) => void;
 }
 
 type ActiveTab = 'portfolio' | 'macro' | 'consolidador';
 
-export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdateMacros, initialSim }: DashboardProps) {
+export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdateMacros, globalSim, onChangeGlobalSim }: DashboardProps) {
   const [activeTab, setActiveTab]     = useState<ActiveTab>('portfolio');
   const [navType, setNavType]         = useState<'nominal' | 'vpl'>('vpl');
   const [selectedEmpresa, setSelectedEmpresa] = useState('Todas');
-  const [globalSim, setGlobalSim]     = useState<SimulationParams>({
-    costOverrun:          initialSim?.costOverrun          ?? 0,
-    delayMonths:          initialSim?.delayMonths          ?? 0,
-    salesSpeedMultiplier: initialSim?.salesSpeedMultiplier ?? 1,
-    discountStock:        initialSim?.discountStock        ?? 0.1,
-    brokerageFee:         initialSim?.brokerageFee         ?? 0.06,
-    carregoBaixo:         initialSim?.carregoBaixo         ?? 20,
-    carregoMedio:         initialSim?.carregoMedio         ?? 25,
-    carregoAlto:          initialSim?.carregoAlto          ?? 28,
-  });
 
   const projectDataList = useMemo(
     () => projects.map(p => runSimulation(p, globalSim, macros, baseDate)),
@@ -115,7 +106,7 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
       {/* Portfolio tab */}
       {activeTab === 'portfolio' && (
         <>
-          <SimulationControls sim={globalSim} onChange={setGlobalSim} />
+          <SimulationControls sim={globalSim} onChange={onChangeGlobalSim} />
           <KPICards
             totalNav={totalNav}
             totalNavDiscounted={totalNavDiscounted}
@@ -136,7 +127,7 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
 
       {/* Macro tab */}
       {activeTab === 'macro' && (
-        <MacroTab macros={macros} onUpdateMacros={onUpdateMacros} sim={globalSim} onChangeSim={setGlobalSim} />
+        <MacroTab macros={macros} onUpdateMacros={onUpdateMacros} sim={globalSim} onChangeSim={onChangeGlobalSim} />
       )}
 
       {/* Consolidador tab */}

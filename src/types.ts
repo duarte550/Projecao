@@ -39,6 +39,7 @@ export interface ProjectInput {
   salesProjectionMode?: 'linear' | 'target' | 'historical' | 'optimal_delta';
   targetPercVendasObra?: number;
   histVendasMensal?: number;
+  carenciaVendas?: number;
 
   customSim?: Partial<SimulationParams>;
   sensMatrix1_Discount?: number;
@@ -70,6 +71,7 @@ export interface SimulationParams {
   carregoBaixo: number;
   carregoMedio: number;
   carregoAlto: number;
+  capVendasMensal?: number;
 }
 
 export interface MonthlyCashFlow {
@@ -144,6 +146,7 @@ export interface ProjectMetrics {
   percVendasParaGap: number;
   statusCurvaOtima: 'OK' | 'Atrasado';
   expectedPercObras: number;
+  salesCapBreaches?: { month: number; date: Date; vendasMes: number }[];
 }
 
 export interface ProjectData {

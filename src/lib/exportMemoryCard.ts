@@ -12,6 +12,7 @@ export function exportMemoryCard(
     'Empresa', 'Nome do projeto', 'Padrão', 'Numero de unidades', 'Metragem média das unidades',
     'Data de lançamento', 'Data de início das obras', 'Data estimada de entrega',
     'VGV Total', '% vendas', '% recebido de sinal', '% pré-chaves', '% pós-chaves',
+    'Carência Vendas (meses)',
     '% de obras', 'Custo incorrido', 'Custo a incorrer',
     'Estoque Atual', 'Pré-chaves recebido', 'Pré-chaves a receber atual', 'Pós-chaves a receber atual',
     'Posição de Caixa da SPE', 'Saldo do Financiamento atual liberado', 'Saldo do financiamento total',
@@ -41,6 +42,7 @@ export function exportMemoryCard(
       p.vendasPercSinal,
       p.vendasPercPreChaves,
       p.vendasPercPosChaves,
+      p.carenciaVendas ?? 0,
       p.percObras,
       p.custoIncorrido,
       custoAIncorrerBake,
@@ -89,7 +91,8 @@ export function exportMemoryCard(
     ['Corretagem', globalSim.brokerageFee],
     ['Carrego Estoque (Baixo Padrão)', globalSim.carregoBaixo],
     ['Carrego Estoque (Médio Padrão)', globalSim.carregoMedio],
-    ['Carrego Estoque (Alto Padrão)', globalSim.carregoAlto]
+    ['Carrego Estoque (Alto Padrão)', globalSim.carregoAlto],
+    ['Cap de Vendas Mensal (%)', globalSim.capVendasMensal ?? '']
   ];
 
   const options = { dateNF: 'dd/mm/yyyy', cellDates: true };

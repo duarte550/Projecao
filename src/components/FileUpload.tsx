@@ -125,6 +125,7 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
           salesProjectionMode: (row['Modo Projeção Vendas (linear/target/historical)'] || row['Modo Projeção Vendas'] || 'linear') as 'linear' | 'target' | 'historical',
           targetPercVendasObra: parseNum(row['Alvo % Vendas Fim Obra'], 0.8),
           histVendasMensal: parseNum(row['Média Histórica Vendas Mensal'], 0.05),
+          carenciaVendas: optionalNum(row['Carência Vendas (meses)'] || row['Carência Vendas']),
 
           customSim: {
             costOverrun: optionalNum(row['Override Sim - Sobrecusto']),
@@ -182,6 +183,9 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
 
         const carregoAltoRow = rawPremissas.find(r => r['Parâmetro'] === 'Carrego Estoque (Alto Padrão)');
         if (carregoAltoRow && carregoAltoRow['Valor'] !== undefined) parsedSim.carregoAlto = parseNum(carregoAltoRow['Valor']);
+
+        const capVendasRow = rawPremissas.find(r => r['Parâmetro'] === 'Cap de Vendas Mensal (%)');
+        if (capVendasRow && capVendasRow['Valor'] !== undefined && capVendasRow['Valor'] !== '') parsedSim.capVendasMensal = parseNum(capVendasRow['Valor']);
 
       } else if (macros.length > 0) {
         baseDate = macros[0].mesAno;
@@ -249,6 +253,7 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
                 <li>• Modo Projeção Vendas (linear/target/historical)</li>
                 <li>• Alvo % Vendas Fim Obra</li>
                 <li>• Média Histórica Vendas Mensal</li>
+                <li>• Carência Vendas (meses)</li>
                 <li>• Estoque Atual</li>
                 <li>• Pré-chaves recebido</li>
                 <li>• Pré-chaves a receber atual</li>
@@ -299,6 +304,7 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
                 <li>• Carrego Estoque (Baixo Padrão)</li>
                 <li>• Carrego Estoque (Médio Padrão)</li>
                 <li>• Carrego Estoque (Alto Padrão)</li>
+                <li>• Cap de Vendas Mensal (%)</li>
               </ul>
             </div>
           </div>

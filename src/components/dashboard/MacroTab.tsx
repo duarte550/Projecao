@@ -36,12 +36,12 @@ export function MacroTab({ macros, onUpdateMacros, sim, onChangeSim }: Props) {
       {sim && onChangeSim && (
         <div className="bg-slate-100 rounded-xl shadow-sm border border-slate-300 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="p-6 border-b border-slate-300">
-            <h2 className="text-lg font-semibold text-slate-800">Custo de Carrego de Estoque (Pós-Obra)</h2>
+            <h2 className="text-lg font-semibold text-slate-800">Parâmetros Globais de Negócio</h2>
             <p className="text-sm text-slate-500 mt-1">
-              Ajuste o custo mensal por m² de estoque pronto, aplicado na fase de pós-carência, de acordo com o padrão do projeto.
+              Ajuste custos mensais de carrego por m² e travas macro de projeção comercial.
             </p>
           </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 bg-white">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-6 bg-white">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Padrão Baixo (R$/m²)</label>
               <input
@@ -66,6 +66,19 @@ export function MacroTab({ macros, onUpdateMacros, sim, onChangeSim }: Props) {
                 type="number"
                 value={sim.carregoAlto}
                 onChange={(e) => updateSimField('carregoAlto', Number(e.target.value) || 0)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Cap de Vendas Mensal (%)</label>
+              <input
+                type="number"
+                step="0.5"
+                min="0"
+                max="100"
+                value={sim.capVendasMensal !== undefined && sim.capVendasMensal !== null ? Number((sim.capVendasMensal * 100).toFixed(2)) : ''}
+                onChange={(e) => updateSimField('capVendasMensal', e.target.value !== '' ? Number(e.target.value) / 100 : undefined)}
+                placeholder="Ex: 10 (para 10%)"
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             </div>

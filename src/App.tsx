@@ -11,14 +11,23 @@ export default function App() {
   const [macros, setMacros] = useState<MacroInput[]>([]);
   const [baseDate, setBaseDate] = useState<Date>(new Date());
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [initialSim, setInitialSim] = useState<Partial<SimulationParams>>({});
+  const [globalSim, setGlobalSim] = useState<SimulationParams>({
+    costOverrun: 0,
+    delayMonths: 0,
+    salesSpeedMultiplier: 1,
+    discountStock: 0.1,
+    brokerageFee: 0.06,
+    carregoBaixo: 20,
+    carregoMedio: 25,
+    carregoAlto: 28,
+  });
   const [view, setView] = useState<'dashboard' | 'upload'>('dashboard');
 
   const handleDataLoaded = (loadedProjects: ProjectInput[], loadedMacros: MacroInput[], loadedBaseDate: Date, parsedSim: Partial<SimulationParams>) => {
     setProjects(loadedProjects);
     setMacros(loadedMacros);
     setBaseDate(loadedBaseDate);
-    setInitialSim(parsedSim);
+    setGlobalSim(prev => ({ ...prev, ...parsedSim }));
     setView('dashboard');
   };
 
@@ -65,7 +74,8 @@ export default function App() {
             projects={projects} 
             macros={macros} 
             baseDate={baseDate} 
-            initialSim={initialSim}
+            globalSim={globalSim}
+            onChangeGlobalSim={setGlobalSim}
             onSelectProject={setSelectedProjectId} 
             onUpdateMacros={setMacros} 
           />
@@ -76,6 +86,7 @@ export default function App() {
             project={selectedProject} 
             macros={macros} 
             baseDate={baseDate} 
+            globalSim={globalSim}
             onBack={() => setSelectedProjectId(null)} 
             onUpdateProject={(updated) => {
               setProjects(projects.map(p => p.id === updated.id ? updated : p));
