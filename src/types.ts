@@ -24,6 +24,7 @@ export interface ProjectInput {
   finTaxaAnual: number;
   finIndexador: string;
   finPercFinanciamento: number;
+  finModalidadeLiberacao?: '100%_custo' | 'perc_financiamento';
   
   permutaTaxaAnual: number;
   permutaIndexador: string;

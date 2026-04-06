@@ -6,7 +6,7 @@ import { exportProjectCashFlowToExcel } from '../lib/exportExcel';
 import { ArrowLeft, TrendingUp, AlertCircle, CheckCircle2, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, BarChart, Bar, ReferenceLine } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, BarChart, Bar, ReferenceLine, ComposedChart } from 'recharts';
 
 interface ProjectDetailProps {
   project: ProjectInput;
@@ -115,6 +115,14 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
       'Juros Financiamento': cf.financingInterestPaid,
       'Amortização Financiamento': cf.financingAmortization,
       'Equity': cf.equityCashFlow,
+    }));
+
+  const vendasData = data.cashFlow
+    .filter(cf => cf.vendasMes > 0)
+    .map(cf => ({
+      name: format(cf.date, 'MMM/yy', { locale: ptBR }).toLowerCase(),
+      '% Vendido do Mês': cf.vendasMes * 100,
+      'Preço Médio (R$/m²)': project.metragemMedia > 0 ? (cf.precoMedioVenda / project.metragemMedia) : cf.precoMedioVenda,
     }));
 
   const updateField = (field: keyof ProjectInput, value: any) => {
@@ -343,10 +351,21 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
 
           <div>
             <h3 className="text-sm font-semibold text-slate-700 border-b border-slate-100 pb-2 mb-4">Financiamento à Construção</h3>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {renderInput('Saldo Já Liberado (R$)', 'saldoFinanciamentoLiberado', 'number', '1000')}
               {renderInput('Financiamento Total Previsto (R$)', 'saldoFinanciamentoTotal', 'number', '1000')}
               {renderInput('% Financiado do Custo', 'finPercFinanciamento', 'percent', '0.01')}
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Regra de Reembolso</label>
+                <select 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  value={project.finModalidadeLiberacao || 'perc_financiamento'}
+                  onChange={(e) => updateField('finModalidadeLiberacao', e.target.value)}
+                >
+                  <option value="perc_financiamento">Pelo % Financiado</option>
+                  <option value="100%_custo">100% do Custo Obra</option>
+                </select>
+              </div>
               {renderInput('Taxa Anual Fin', 'finTaxaAnual', 'percent', '0.01')}
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Indexador</label>
@@ -604,6 +623,30 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
               </ResponsiveContainer>
             </div>
           </div>
+
+          {vendasData.length > 0 && (
+            <div className="col-span-1 lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-800 mb-2">Projeção de Vendas e Valorização</h2>
+              <p className="text-sm text-slate-500 mb-6">Acompanhamento do ritmo de vendas (% mensal) e do valor do m² vendido atualizado (INCC)</p>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={vendasData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="name" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="left" tickFormatter={(val) => `${val.toFixed(1)}%`} tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} orientation="left" />
+                    <YAxis yAxisId="right" tickFormatter={(val) => `R$ ${val.toLocaleString('pt-BR')}`} tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} orientation="right" />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      formatter={(value: number, name: string) => name.includes('%') ? `${value.toFixed(2)}%` : formatCurrency(value)}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                    <Bar yAxisId="left" dataKey="% Vendido do Mês" fill="#3b82f6" radius={[4, 4, 0, 0]} opacity={0.8} />
+                    <Line yAxisId="right" type="monotone" dataKey="Preço Médio (R$/m²)" stroke="#ec4899" strokeWidth={3} dot={{ r: 3, fill: '#ec4899', strokeWidth: 0 }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
 
           {repasseData.length > 0 && (
             <div className="col-span-1 lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">

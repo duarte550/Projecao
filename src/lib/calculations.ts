@@ -20,6 +20,32 @@ export function calculateOptimalCurve(percVendas: number): number {
   return 1.0313 * percVendas + 0.1335;
 }
 
+export function calculateConstructionProgress(n_meses: number, mes_atual: number): number {
+  if (n_meses < 1 || n_meses > 60) return 0;
+  if (mes_atual < 1 || mes_atual > n_meses) return 0;
+
+  const alpha = n_meses <= 24 ? 1.66 : 2.48;
+  const beta = n_meses <= 24 ? 1.33 : 1.54;
+
+  let soma_w = 0;
+  let w_mes_atual = 0;
+
+  for (let k = 1; k <= n_meses; k++) {
+    const x_k = (k - 0.5) / n_meses;
+    const w_k = Math.pow(x_k, alpha - 1) * Math.pow(1 - x_k, beta - 1);
+    soma_w += w_k;
+    if (k === mes_atual) {
+      w_mes_atual = w_k;
+    }
+  }
+
+  return soma_w > 0 ? w_mes_atual / soma_w : 0;
+}
+
+export function calculateConstructionProgressPercentage(n_meses: number, mes_atual: number): number {
+  return calculateConstructionProgress(n_meses, mes_atual) * 100;
+}
+
 // ─────────────────────────────────────────────────────────────
 //  Utilitários de taxas / indexadores
 // ─────────────────────────────────────────────────────────────
@@ -284,12 +310,17 @@ function waterfallConstruction(
   receivables: number,
   minimumCaixa: number,
   accumulatedOOP: number,
+  requestedDrawdown: number
 ): WaterfallResult {
   let permutaPayment = Math.min(receivables * permutaPercRecebiveis, permutaBalance);
   availableCash -= permutaPayment;
   permutaBalance -= permutaPayment;
 
   availableCash -= constructionCost;
+
+  let finDrawdown = Math.min(requestedDrawdown, Math.max(0, finTotalLimit - finBalance));
+  finBalance += finDrawdown;
+  availableCash += finDrawdown;
 
   let finInterestPaid: number;
   let outOfPocketInterest = 0;
@@ -306,21 +337,13 @@ function waterfallConstruction(
   finBalance += finInterest - finInterestPaid;
 
   const caixaFinal = availableCash;
-  let finDrawdown = 0;
   let equityCashFlow = 0;
   let finalCaixa: number;
 
   if (caixaFinal < minimumCaixa) {
     const shortfall = minimumCaixa - caixaFinal;
-    finDrawdown = Math.min(shortfall, finTotalLimit - finBalance);
-    finBalance += finDrawdown;
-
-    if (finDrawdown < shortfall) {
-      equityCashFlow = -(shortfall - finDrawdown);
-      finalCaixa = minimumCaixa;
-    } else {
-      finalCaixa = caixaFinal + finDrawdown;
-    }
+    equityCashFlow = -shortfall;
+    finalCaixa = minimumCaixa;
   } else {
     finalCaixa = caixaFinal;
   }
@@ -530,6 +553,32 @@ export function runSimulation(
   const cashFlow: MonthlyCashFlow[] = [];
   let cumulativeDiscountFactor = 1;
 
+  // ── Variáveis para cálculo da Beta e Reembolso ──
+  const dtInicioObras = new Date(input.dataInicioObras);
+  dtInicioObras.setDate(1);
+  let n_meses_obra = differenceInMonths(adjustedDataEntrega, dtInicioObras);
+  if (n_meses_obra <= 0) n_meses_obra = 1;
+  n_meses_obra = Math.max(1, Math.min(60, n_meses_obra));
+
+  let pastConstructionCost = 0;
+
+  // Estimar o custo andado no Mês 0 (anterior ao Mês 1) para gerar o primeiro reembolso
+  const mes_0_obra = (currentDate.getFullYear() - dtInicioObras.getFullYear()) * 12 +
+                     (currentDate.getMonth() - dtInicioObras.getMonth()) + 1;
+                     
+  if (input.percObras < 1) {
+    let w_mes_0 = 0;
+    if (mes_0_obra >= 1 && mes_0_obra <= n_meses_obra) {
+      w_mes_0 = calculateConstructionProgress(n_meses_obra, mes_0_obra);
+    } else if (mes_0_obra > n_meses_obra) {
+      w_mes_0 = (1 - input.percObras) / Math.max(1, constructionMonths);
+    }
+
+    const fractionRemaining = Math.max(0.0001, 1 - input.percObras);
+    const custoTotalProxy = pools.costAIncorrer / fractionRemaining;
+    pastConstructionCost = custoTotalProxy * w_mes_0;
+  }
+
   // ── Loop mensal ──
   for (let m = 1; m <= totalMonths; m++) {
     const currentMonthDate = addMonths(currentDate, m);
@@ -565,9 +614,43 @@ export function runSimulation(
     let constructionCost = 0;
     let obrasMes = 0;
 
+    // Cálculo do Drawdown do mês com base no que andou no mês anterior
+    let requestedDrawdown = 0;
+    const mode = input.finModalidadeLiberacao || 'perc_financiamento';
+    if (mode === '100%_custo') {
+       requestedDrawdown = pastConstructionCost;
+    } else {
+       requestedDrawdown = pastConstructionCost * (input.finPercFinanciamento ?? 0);
+    }
+
     if (phase.isConstructing) {
-      obrasMes = Math.min(1 - currentPercObras, (1 - currentPercObras) / remainingConstMonths);
-      constructionCost = pools.costAIncorrer / remainingConstMonths;
+      const mes_atual_obra = (currentMonthDate.getFullYear() - dtInicioObras.getFullYear()) * 12 +
+                             (currentMonthDate.getMonth() - dtInicioObras.getMonth()) + 1;
+      
+      let w_mes = 0;
+      if (mes_atual_obra >= 1 && mes_atual_obra <= n_meses_obra) {
+        w_mes = calculateConstructionProgress(n_meses_obra, mes_atual_obra);
+      } else if (mes_atual_obra > n_meses_obra) {
+        w_mes = (1 - currentPercObras) / remainingConstMonths;
+      }
+
+      if (w_mes <= 0 && currentPercObras < 1) {
+         w_mes = (1 - currentPercObras) / remainingConstMonths;
+      }
+
+      if (remainingConstMonths <= 1) {
+        obrasMes = 1 - currentPercObras;
+      } else {
+        obrasMes = Math.min(1 - currentPercObras, w_mes);
+      }
+
+      // Custo do mês é exatamente o Custo Total Projetado Atualizado * o % de obras daquele mês
+      const percentualRestante = Math.max(0.0001, 1 - currentPercObras);
+      const custoTotalProjetadoAtualizado = pools.costAIncorrer / percentualRestante;
+      
+      constructionCost = custoTotalProjetadoAtualizado * obrasMes;
+      constructionCost = Math.min(constructionCost, pools.costAIncorrer);
+
       pools.costAIncorrer -= constructionCost;
     }
 
@@ -653,6 +736,7 @@ export function runSimulation(
         recResult.receivables,
         minimumCaixa,
         accumulatedOutOfPocketInterest,
+        requestedDrawdown
       );
       accumulatedOutOfPocketInterest = wf.accumulatedOOP;
     } else {
@@ -724,6 +808,8 @@ export function runSimulation(
       unidadesVendidasMes,
       precoMedioVenda,
     });
+
+    pastConstructionCost = constructionCost;
   }
 
   // ── Métricas finais ──
