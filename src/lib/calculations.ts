@@ -151,7 +151,7 @@ function determinePhase(
   const isConstructionPhase = m <= constructionMonths;
   const isGrace = m > constructionMonths && m <= constructionMonths + 3;
   const isRepasse = m > constructionMonths + 3 && m <= constructionMonths + 9;
-  const isStockSale = m > constructionMonths + 15;
+  const isStockSale = m > constructionMonths + 9;
 
   const worksCanStart =
     input.percObras > 0 ||
@@ -531,7 +531,7 @@ export function runSimulation(
   const adjustedCustoAIncorrer = input.custoAIncorrer + (custoTotalReferencia * sim.costOverrun);
   const adjustedDataEntrega = addMonths(input.dataEstimadaEntrega, sim.delayMonths);
   const constructionMonths = Math.max(1, differenceInMonths(adjustedDataEntrega, currentDate));
-  const totalMonths = constructionMonths + 15; // Construção + Carência (3) + Revendas (12 meses totais de escoamento pós-carência)
+  const totalMonths = constructionMonths + 21; // Construção + Carência (3) + Repasse (6) + Venda Estoque (12)
 
   // ── Estado mutável ao longo da projeção ──
   let pools: INCCPools = {
