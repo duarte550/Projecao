@@ -330,19 +330,14 @@ function waterfallConstruction(
   finBalance += finDrawdown;
   availableCash += finDrawdown;
 
-  let finInterestPaid: number;
   let outOfPocketInterest = 0;
-
-  if (availableCash >= finInterest) {
-    finInterestPaid = finInterest;
-    availableCash -= finInterest;
-  } else {
-    finInterestPaid = Math.max(0, availableCash);
-    availableCash -= finInterestPaid;
-    outOfPocketInterest = finInterest - finInterestPaid;
+  if (availableCash < finInterest) {
+    outOfPocketInterest = finInterest - Math.max(0, availableCash);
     accumulatedOOP += outOfPocketInterest;
   }
-  finBalance += finInterest - finInterestPaid;
+
+  let finInterestPaid = finInterest;
+  availableCash -= finInterestPaid;
 
   const caixaFinal = availableCash;
   let equityCashFlow = 0;
@@ -380,9 +375,14 @@ function waterfallPostConstruction(
   permutaPercRecebiveis: number,
   receivables: number,
   minimumCaixa: number,
-  isRepasseOrLater: boolean
+  isRepasseOrLater: boolean,
+  permutaCashSweep?: boolean
 ): WaterfallResult {
-  let permutaPayment = Math.min(receivables * permutaPercRecebiveis, permutaBalance);
+
+  let permutaPayment = 0;
+  if (permutaCashSweep || finBalance <= 0) {
+    permutaPayment = Math.min(receivables * permutaPercRecebiveis, permutaBalance);
+  }
   availableCash -= permutaPayment;
   permutaBalance -= permutaPayment;
 
@@ -740,8 +740,38 @@ export function runSimulation(
     const retPayment = recResult.receivables * 0.04; // Imposto RET simples
     const brokeragePayment = vgvVendidoMes * (sim.brokerageFee ?? 0.06);
 
+    let outrosCustosPerc = input.outrosCustosVgvTerc3 ?? 0.02;
+    if (currentPercObras <= 0.33) {
+      outrosCustosPerc = input.outrosCustosVgvTerc1 ?? 0.06;
+    } else if (currentPercObras <= 0.66) {
+      outrosCustosPerc = input.outrosCustosVgvTerc2 ?? 0.04;
+    }
+    const outrosCustosVgv = recResult.receivables * outrosCustosPerc;
+
+    let custoCarregoEstoque = 0;
+    if (m > constructionMonths + 3) {
+       let valorM2 = sim.carregoMedio ?? 25;
+       if (input.padrao === 'Baixo') valorM2 = sim.carregoBaixo ?? 20;
+       if (input.padrao === 'Alto') valorM2 = sim.carregoAlto ?? 28;
+
+       const numUnidadesEstoque = input.numeroUnidades * estoqueRemanescentePerc;
+       const metragemEstoque = numUnidadesEstoque * (input.metragemMedia || 0);
+       custoCarregoEstoque = metragemEstoque * valorM2;
+    }
+
+    let custosJuridicos = 0;
+    const isDividasQuitadas = (currentFinBalance <= 0) && (currentPermutaBalance <= 0);
+    if (!isDividasQuitadas) {
+      if (phase.isConstructionPhase) {
+        custosJuridicos = input.custoJuridicoObra ?? 0;
+      } else {
+        custosJuridicos = input.custoJuridicoPosObra ?? 0;
+      }
+    }
+
     availableCash -= retPayment;
     availableCash -= brokeragePayment;
+    availableCash -= (outrosCustosVgv + custoCarregoEstoque + custosJuridicos);
 
     // 12. Cascata de pagamentos
     let wf: WaterfallResult;
@@ -771,6 +801,7 @@ export function runSimulation(
         recResult.receivables,
         minimumCaixa,
         m === totalMonths,
+        input.permutaCashSweep
       );
     }
 
@@ -820,6 +851,11 @@ export function runSimulation(
       permutaBalanceInicial,
       permutaInterest,
       permutaBalance: currentPermutaBalance,
+      
+      outrosCustosVgv,
+      custoCarregoEstoque,
+      custosJuridicos,
+
       equityCashFlow: wf.equityCashFlow,
       discountFactor,
       discountedEquityCashFlow: wf.equityCashFlow * discountFactor,

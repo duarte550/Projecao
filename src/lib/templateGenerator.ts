@@ -55,7 +55,14 @@ export async function downloadTemplate() {
     { header: 'Saldo no inicio (Permuta)', unit: 'R$', color: 'FFEDD5', font: 'C2410C', width: 25 },
     { header: 'Taxa Anual (Permuta)', unit: 'Decimal', color: 'FFEDD5', font: 'C2410C', width: 25 },
     { header: 'Indexador (Permuta)', unit: 'Texto (Ex: INCC/TR)', color: 'FFEDD5', font: 'C2410C', width: 25 },
-    { header: '% de permuta dos recebíveis', unit: 'Decimal', color: 'FFEDD5', font: 'C2410C', width: 30 }
+    { header: '% de permuta dos recebíveis', unit: 'Decimal', color: 'FFEDD5', font: 'C2410C', width: 30 },
+    
+    // Outros Custos (OPEX) (Azul Claro)
+    { header: 'Outros Custos VGV < 33%', unit: 'Decimal', color: 'E0F2FE', font: '0369A1', width: 25 },
+    { header: 'Outros Custos VGV < 66%', unit: 'Decimal', color: 'E0F2FE', font: '0369A1', width: 25 },
+    { header: 'Outros Custos VGV > 66%', unit: 'Decimal', color: 'E0F2FE', font: '0369A1', width: 25 },
+    { header: 'Custo Jurídico Obra', unit: 'R$', color: 'E0F2FE', font: '0369A1', width: 25 },
+    { header: 'Custo Jurídico Pós-Obra', unit: 'R$', color: 'E0F2FE', font: '0369A1', width: 25 }
   ];
 
   wsProjects.columns = config.map(c => ({ header: c.header, key: c.header, width: c.width }));
@@ -113,7 +120,12 @@ export async function downloadTemplate() {
       p.permutaSaldoInicio,
       p.permutaTaxaAnual,
       p.permutaIndexador,
-      p.permutaPercRecebiveis
+      p.permutaPercRecebiveis,
+      p.outrosCustosVgvTerc1 ?? 0.06,
+      p.outrosCustosVgvTerc2 ?? 0.04,
+      p.outrosCustosVgvTerc3 ?? 0.02,
+      p.custoJuridicoObra ?? 15000,
+      p.custoJuridicoPosObra ?? 5000
     ]);
   });
 
@@ -162,6 +174,9 @@ export async function downloadTemplate() {
   wsPremissas.addRow(['Desconto Estoque Pronto', 0.10]);
   wsPremissas.addRow(['Velocidade de Vendas (Multiplicador)', 1.0]);
   wsPremissas.addRow(['Corretagem', 0.06]);
+  wsPremissas.addRow(['Carrego Estoque (Baixo Padrão)', 20]);
+  wsPremissas.addRow(['Carrego Estoque (Médio Padrão)', 25]);
+  wsPremissas.addRow(['Carrego Estoque (Alto Padrão)', 28]);
 
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

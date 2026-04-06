@@ -32,6 +32,9 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
     salesSpeedMultiplier: initialSim?.salesSpeedMultiplier ?? 1,
     discountStock:        initialSim?.discountStock        ?? 0.1,
     brokerageFee:         initialSim?.brokerageFee         ?? 0.06,
+    carregoBaixo:         initialSim?.carregoBaixo         ?? 20,
+    carregoMedio:         initialSim?.carregoMedio         ?? 25,
+    carregoAlto:          initialSim?.carregoAlto          ?? 28,
   });
 
   const projectDataList = useMemo(
@@ -133,7 +136,7 @@ export function Dashboard({ projects, macros, baseDate, onSelectProject, onUpdat
 
       {/* Macro tab */}
       {activeTab === 'macro' && (
-        <MacroTab macros={macros} onUpdateMacros={onUpdateMacros} />
+        <MacroTab macros={macros} onUpdateMacros={onUpdateMacros} sim={globalSim} onChangeSim={setGlobalSim} />
       )}
 
       {/* Consolidador tab */}

@@ -2,7 +2,7 @@ export interface ProjectInput {
   id: string;
   empresa: string;
   nome: string;
-  padrao: 'Médio' | 'Alto';
+  padrao: 'Baixo' | 'Médio' | 'Alto';
   dataLancamento: Date;
   percVendas: number;
   vgvTotal: number;
@@ -30,6 +30,7 @@ export interface ProjectInput {
   permutaIndexador: string;
   permutaSaldoInicio: number;
   permutaPercRecebiveis: number;
+  permutaCashSweep?: boolean;
 
   vendasPercSinal: number;
   vendasPercPreChaves: number;
@@ -43,6 +44,13 @@ export interface ProjectInput {
   sensMatrix1_Discount?: number;
   sensMatrix2_Cost?: number;
   sensMatrix3_Delay?: number;
+
+  outrosCustosVgvTerc1?: number;
+  outrosCustosVgvTerc2?: number;
+  outrosCustosVgvTerc3?: number;
+
+  custoJuridicoObra?: number;
+  custoJuridicoPosObra?: number;
 }
 
 export interface MacroInput {
@@ -59,6 +67,9 @@ export interface SimulationParams {
   salesSpeedMultiplier: number;
   discountStock: number;
   brokerageFee: number;
+  carregoBaixo: number;
+  carregoMedio: number;
+  carregoAlto: number;
 }
 
 export interface MonthlyCashFlow {
@@ -94,6 +105,10 @@ export interface MonthlyCashFlow {
   caixaFinal: number;
   financingDrawdown: number;
   caixaAposFinanciamento: number;
+
+  outrosCustosVgv: number;
+  custoCarregoEstoque: number;
+  custosJuridicos: number;
   
   financingBalanceInicial: number;
   financingInterest: number;

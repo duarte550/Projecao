@@ -1,6 +1,6 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { MacroInput } from '../../types';
+import { MacroInput, SimulationParams } from '../../types';
 
 const MACRO_FIELDS: { key: keyof MacroInput; label: string }[] = [
   { key: 'incc', label: 'INCC (%)' },
@@ -12,9 +12,11 @@ const MACRO_FIELDS: { key: keyof MacroInput; label: string }[] = [
 interface Props {
   macros: MacroInput[];
   onUpdateMacros?: (macros: MacroInput[]) => void;
+  sim?: SimulationParams;
+  onChangeSim?: (sim: SimulationParams) => void;
 }
 
-export function MacroTab({ macros, onUpdateMacros }: Props) {
+export function MacroTab({ macros, onUpdateMacros, sim, onChangeSim }: Props) {
   const updateField = (idx: number, field: keyof MacroInput, raw: string) => {
     const val = parseFloat(raw);
     if (isNaN(val) || !onUpdateMacros) return;
@@ -23,16 +25,63 @@ export function MacroTab({ macros, onUpdateMacros }: Props) {
     onUpdateMacros(next);
   };
 
+  const updateSimField = (field: keyof SimulationParams, val: number) => {
+    if (sim && onChangeSim) {
+      onChangeSim({ ...sim, [field]: val });
+    }
+  };
+
   return (
-    <div className="bg-slate-100 rounded-xl shadow-sm border border-slate-300 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="p-6 border-b border-slate-300">
-        <h2 className="text-lg font-semibold text-slate-800">Projeções Macroeconômicas</h2>
-        <p className="text-sm text-slate-500 mt-1">
-          Os valores abaixo foram carregados da planilha de Input, mas você pode ajustá-los em tempo real aqui.
-          O Dashboard reagirá instantaneamente a qualquer mudança nessa curva. Tabela interativa.
-          Exportar o Memory Card salvará estes novos valores na próxima aba "Macros".
-        </p>
-      </div>
+    <div className="space-y-6">
+      {sim && onChangeSim && (
+        <div className="bg-slate-100 rounded-xl shadow-sm border border-slate-300 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="p-6 border-b border-slate-300">
+            <h2 className="text-lg font-semibold text-slate-800">Custo de Carrego de Estoque (Pós-Obra)</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Ajuste o custo mensal por m² de estoque pronto, aplicado na fase de pós-carência, de acordo com o padrão do projeto.
+            </p>
+          </div>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 bg-white">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Padrão Baixo (R$/m²)</label>
+              <input
+                type="number"
+                value={sim.carregoBaixo}
+                onChange={(e) => updateSimField('carregoBaixo', Number(e.target.value) || 0)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Padrão Médio (R$/m²)</label>
+              <input
+                type="number"
+                value={sim.carregoMedio}
+                onChange={(e) => updateSimField('carregoMedio', Number(e.target.value) || 0)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Padrão Alto (R$/m²)</label>
+              <input
+                type="number"
+                value={sim.carregoAlto}
+                onChange={(e) => updateSimField('carregoAlto', Number(e.target.value) || 0)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-slate-100 rounded-xl shadow-sm border border-slate-300 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="p-6 border-b border-slate-300">
+          <h2 className="text-lg font-semibold text-slate-800">Projeções Macroeconômicas</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Os valores abaixo foram carregados da planilha de Input, mas você pode ajustá-los em tempo real aqui.
+            O Dashboard reagirá instantaneamente a qualquer mudança nessa curva. Tabela interativa.
+            Exportar o Memory Card salvará estes novos valores na próxima aba "Macros".
+          </p>
+        </div>
       <div className="overflow-x-auto max-h-[600px]">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-slate-200 border-b border-slate-300 text-slate-600 font-medium sticky top-0 z-10 shadow-[0_1px_0_0_#cbd5e1]">
@@ -62,6 +111,7 @@ export function MacroTab({ macros, onUpdateMacros }: Props) {
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   );
 }

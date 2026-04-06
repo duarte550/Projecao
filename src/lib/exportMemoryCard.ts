@@ -17,6 +17,8 @@ export function exportMemoryCard(
     'Posição de Caixa da SPE', 'Saldo do Financiamento atual liberado', 'Saldo do financiamento total',
     'Taxa anual (Fin)', 'Indexador (Fin)', '% de financiamento do projeto',
     'Saldo no inicio (Permuta)', 'Taxa Anual (Permuta)', 'Indexador (Permuta)', '% de permuta dos recebíveis',
+    'Outros Custos VGV < 33%', 'Outros Custos VGV < 66%', 'Outros Custos VGV > 66%',
+    'Custo Jurídico Obra', 'Custo Jurídico Pós-Obra',
     'Override Sim - Sobrecusto', 'Override Sim - Atraso', 'Override Sim - Desconto',
     'Matriz Sens 1 - Desconto', 'Matriz Sens 2 - Sobrecusto', 'Matriz Sens 3 - Atraso'
   ];
@@ -56,6 +58,11 @@ export function exportMemoryCard(
       p.permutaTaxaAnual,
       p.permutaIndexador,
       p.permutaPercRecebiveis,
+      p.outrosCustosVgvTerc1 ?? '',
+      p.outrosCustosVgvTerc2 ?? '',
+      p.outrosCustosVgvTerc3 ?? '',
+      p.custoJuridicoObra ?? '',
+      p.custoJuridicoPosObra ?? '',
       p.customSim?.costOverrun ?? '',
       p.customSim?.delayMonths ?? '',
       p.customSim?.discountStock ?? '',
@@ -79,7 +86,10 @@ export function exportMemoryCard(
     ['Data Base da Projeção', baseDate],
     ['Desconto Estoque Pronto', globalSim.discountStock],
     ['Velocidade de Vendas (Multiplicador)', globalSim.salesSpeedMultiplier],
-    ['Corretagem', globalSim.brokerageFee]
+    ['Corretagem', globalSim.brokerageFee],
+    ['Carrego Estoque (Baixo Padrão)', globalSim.carregoBaixo],
+    ['Carrego Estoque (Médio Padrão)', globalSim.carregoMedio],
+    ['Carrego Estoque (Alto Padrão)', globalSim.carregoAlto]
   ];
 
   const options = { dateNF: 'dd/mm/yyyy', cellDates: true };

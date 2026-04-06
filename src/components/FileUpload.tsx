@@ -116,6 +116,12 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
           vendasPercPreChaves: parseNum(row['% pré-chaves']),
           vendasPercPosChaves: parseNum(row['% pós-chaves']),
 
+          outrosCustosVgvTerc1: optionalNum(row['Outros Custos VGV < 33%']),
+          outrosCustosVgvTerc2: optionalNum(row['Outros Custos VGV < 66%']),
+          outrosCustosVgvTerc3: optionalNum(row['Outros Custos VGV > 66%']),
+          custoJuridicoObra: optionalNum(row['Custo Jurídico Obra'] || row['Custo Jurídico Obra (R$/mês)']),
+          custoJuridicoPosObra: optionalNum(row['Custo Jurídico Pós-Obra'] || row['Custo Jurídico Pós (R$/mês)']),
+
           salesProjectionMode: (row['Modo Projeção Vendas (linear/target/historical)'] || row['Modo Projeção Vendas'] || 'linear') as 'linear' | 'target' | 'historical',
           targetPercVendasObra: parseNum(row['Alvo % Vendas Fim Obra'], 0.8),
           histVendasMensal: parseNum(row['Média Histórica Vendas Mensal'], 0.05),
@@ -167,6 +173,15 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
 
         const brokRow = rawPremissas.find(r => r['Parâmetro'] === 'Corretagem');
         if (brokRow && brokRow['Valor'] !== undefined) parsedSim.brokerageFee = parseNum(brokRow['Valor']);
+
+        const carregoBaixoRow = rawPremissas.find(r => r['Parâmetro'] === 'Carrego Estoque (Baixo Padrão)');
+        if (carregoBaixoRow && carregoBaixoRow['Valor'] !== undefined) parsedSim.carregoBaixo = parseNum(carregoBaixoRow['Valor']);
+
+        const carregoMedioRow = rawPremissas.find(r => r['Parâmetro'] === 'Carrego Estoque (Médio Padrão)');
+        if (carregoMedioRow && carregoMedioRow['Valor'] !== undefined) parsedSim.carregoMedio = parseNum(carregoMedioRow['Valor']);
+
+        const carregoAltoRow = rawPremissas.find(r => r['Parâmetro'] === 'Carrego Estoque (Alto Padrão)');
+        if (carregoAltoRow && carregoAltoRow['Valor'] !== undefined) parsedSim.carregoAlto = parseNum(carregoAltoRow['Valor']);
 
       } else if (macros.length > 0) {
         baseDate = macros[0].mesAno;
@@ -248,6 +263,11 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
                 <li>• Taxa Anual (Permuta)</li>
                 <li>• Indexador (Permuta)</li>
                 <li>• % de permuta dos recebíveis</li>
+                <li>• Outros Custos VGV &lt; 33%</li>
+                <li>• Outros Custos VGV &lt; 66%</li>
+                <li>• Outros Custos VGV &gt; 66%</li>
+                <li>• Custo Jurídico Obra</li>
+                <li>• Custo Jurídico Pós-Obra</li>
                 <li>• Override Sim - Sobrecusto (Adicional)</li>
                 <li>• Override Sim - Atraso (Adicional)</li>
                 <li>• Override Sim - Desconto (Adicional)</li>
@@ -276,6 +296,9 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
                 <li>• Desconto Estoque Pronto</li>
                 <li>• Velocidade de Vendas (Multiplicador)</li>
                 <li>• Corretagem</li>
+                <li>• Carrego Estoque (Baixo Padrão)</li>
+                <li>• Carrego Estoque (Médio Padrão)</li>
+                <li>• Carrego Estoque (Alto Padrão)</li>
               </ul>
             </div>
           </div>

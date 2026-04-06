@@ -45,7 +45,16 @@ const macros = [{
 
 const baseDate = new Date('2024-01-01');
 
-const res = runSimulation(project, { costOverrun: 0.2, delayMonths: 6, salesSpeedMultiplier: 1, discountStock: 0.1, brokerageFee: 0.06 }, macros, baseDate);
+const res = runSimulation(project, { 
+  costOverrun: 0.2, 
+  delayMonths: 6, 
+  salesSpeedMultiplier: 1, 
+  discountStock: 0.1, 
+  brokerageFee: 0.06,
+  carregoBaixo: 20,
+  carregoMedio: 25,
+  carregoAlto: 28,
+}, macros, baseDate);
 
 console.log("NAV:", res.metrics.nav);
 console.log("NAV Discounted:", res.metrics.navDiscounted);
