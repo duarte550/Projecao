@@ -20,6 +20,14 @@ export function calculateOptimalCurve(percVendas: number): number {
   return 1.0313 * percVendas + 0.1335;
 }
 
+/** Retorna o % de vendas esperado para um dado % de obras (inversa da curva ótima). */
+export function calculateOptimalSales(percObras: number): number {
+  if (percObras <= 0) return 0.30;
+  if (percObras < 0.09271) return (percObras + 0.5326) / 1.7866;
+  if (percObras < 0.69549) return (percObras + 0.9617) / 3.0136;
+  return (percObras - 0.1335) / 1.0313;
+}
+
 export function calculateConstructionProgress(n_meses: number, mes_atual: number): number {
   if (n_meses < 1 || n_meses > 60) return 0;
   if (mes_atual < 1 || mes_atual > n_meses) return 0;
@@ -562,6 +570,9 @@ export function runSimulation(
 
   let pastConstructionCost = 0;
 
+  const initialOptimalSales = calculateOptimalSales(input.percObras);
+  const initialSalesDelta = initialOptimalSales - input.percVendas;
+
   // Estimar o custo andado no Mês 0 (anterior ao Mês 1) para gerar o primeiro reembolso
   const mes_0_obra = (currentDate.getFullYear() - dtInicioObras.getFullYear()) * 12 +
                      (currentDate.getMonth() - dtInicioObras.getMonth()) + 1;
@@ -670,6 +681,17 @@ export function runSimulation(
       }
     } else if (input.salesProjectionMode === 'historical') {
       vendasMesBase = input.histVendasMensal || 0;
+    } else if (input.salesProjectionMode === 'optimal_delta') {
+      if (phase.isConstructionPhase) {
+        const nextPercObras = Math.min(1, currentPercObras + obrasMes);
+        const nextOptimalSales = calculateOptimalSales(nextPercObras);
+        let targetVendas = nextOptimalSales - initialSalesDelta;
+        targetVendas = Math.max(currentPercVendas, targetVendas); // Evitar vendas negativas
+        vendasMesBase = targetVendas - currentPercVendas;
+      } else {
+        const monthsPostConst = totalMonths - constructionMonths;
+        vendasMesBase = monthsPostConst > 0 ? (1 - currentPercVendas) / monthsPostConst : (1 - currentPercVendas);
+      }
     }
 
     let vendasMes = vendasMesBase * (sim.salesSpeedMultiplier ?? 1);

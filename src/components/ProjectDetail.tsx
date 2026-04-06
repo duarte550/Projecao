@@ -316,6 +316,7 @@ export function ProjectDetail({ project, macros, baseDate, onBack, onUpdateProje
                   <option value="linear">Linear até o fim (Estoque)</option>
                   <option value="target">Meta de Venda ao final da Obra</option>
                   <option value="historical">Média Histórica (Mensal Constante)</option>
+                  <option value="optimal_delta">Manter Delta Curva Ótima</option>
                 </select>
               </div>
 

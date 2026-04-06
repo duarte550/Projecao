@@ -35,7 +35,7 @@ export interface ProjectInput {
   vendasPercPreChaves: number;
   vendasPercPosChaves: number;
 
-  salesProjectionMode?: 'linear' | 'target' | 'historical';
+  salesProjectionMode?: 'linear' | 'target' | 'historical' | 'optimal_delta';
   targetPercVendasObra?: number;
   histVendasMensal?: number;
 
