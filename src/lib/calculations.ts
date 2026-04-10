@@ -547,12 +547,20 @@ export function runSimulation(
   const totalMonths = constructionMonths + 21; // Construção + Carência (3) + Repasse (6) + Venda Estoque (12)
 
   // ── Estado mutável ao longo da projeção ──
+  // Se o usuário preencheu estoqueAtual, deriva o VGV total implícito pelo preço atual das unidades.
+  // Isso garante que todas as vendas futuras reflitam o valor corrente do estoque e não apenas o VGV original.
+  const percEstoqueRestante = Math.max(0, 1 - input.percVendas);
+  const effectiveVgvTotal =
+    input.estoqueAtual > 0 && percEstoqueRestante > 0
+      ? input.estoqueAtual / percEstoqueRestante  // back-calcula VGV total a partir do estoque informado
+      : input.vgvTotal;                           // fallback para VGV total bruto
+
   let pools: INCCPools = {
     costAIncorrer: adjustedCustoAIncorrer,
     poolPreChaves: input.preChavesAReceberAtual,
     repassePool: input.posChavesAReceberAtual,
-    vgvTotal: input.vgvTotal,
-    estoque: input.estoqueAtual,
+    vgvTotal: effectiveVgvTotal,
+    estoque: input.estoqueAtual > 0 ? input.estoqueAtual : input.vgvTotal * percEstoqueRestante,
   };
 
   let currentCaixa = input.posicaoCaixa;
